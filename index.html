@@ -190,7 +190,7 @@
   <p class="eyebrow">Starforce lab · GMS v269 · live calculator</p>
   <h1>When to safeguard, solved — for any item, any spare price, any event</h1>
   <p class="sub">The new Star Force system, optimized exactly in your browser.
-  Describe your item below — the optimal per-star policy, every chart and every number recomputes.
+  Set your item below — the optimal per-star policy and every number on the page recompute.
   Links carry your settings. Defaults: a Lv 250 item with 2b spares, during the 30% event.</p>
 
   <div class="card" style="margin-top:20px">
@@ -542,8 +542,8 @@ function monteCarlo(list, P, rc, target, start, trials, onProgress, onDone){
     const n = Math.max(1, job.i);
     const sorted = job.totals.slice(0, n); sorted.sort();
     const q = p => sorted[Math.min(n-1, Math.floor(p*n))];
-    const bd = new Array(16).fill(0);
-    for (let k=0; k<n; k++) bd[Math.min(job.booms[k],15)]++;
+    const bd = new Array(40).fill(0);
+    for (let k=0; k<n; k++) bd[Math.min(job.booms[k],39)]++;
     const spend = new Float64Array(target);
     for (let s=0; s<target; s++) spend[s] = job.spend[s]/n;
     return { key: job.row.key, n, trunc: job.trunc||0, totals: sorted, boomDist: bd.map(c=>c/n),
@@ -663,7 +663,7 @@ function niceStep(range, ticks){
   return ladder[ladder.length-1];
 }
 const MODE = { M1:{lab:'None', full:'Level 1 (no protection)'}, M2:{lab:'Lv 2', full:'Level 2'},
-  M3:{lab:'Lv 3', full:'Level 3'}, M4:{lab:'Lv 4', full:'Level 4 (0% boom)'}, SG:{lab:'SG', full:'Classic Safeguard (0% boom)'} };
+  M3:{lab:'Lv 3', full:'Level 3'}, M4:{lab:'Lv 4', full:'Level 4 (0% boom)'}, SG:{lab:'SG', full:'Safeguard (0% boom)'} };
 const MCOL = m => m==='M2' ? css('--m2') : m==='M3' ? css('--m3') : (m==='M4'||m==='SG') ? css('--m4') : 'none';
 const EVLABEL = { ssf:'30% off + boom −30%', '30off':'30% off (cost only)', none:'no event' };
 
@@ -757,7 +757,7 @@ function refresh(){
   ];
   const rows = [{ key: policyKey(opt), label: '', pol: opt, optimal:true }];
   rows[0].label = (policyKey(opt)==='bare' ? 'All bare' :
-    policyKey(opt)==='lv3' ? 'Lv 3 @ 20–21★' : shortVerdict(opt)) + ' (optimal)';
+    policyKey(opt)==='lv3' ? 'Lv 3 @ 20–21★' : groupProt(opt).join(' · ')) + ' (optimal)';
   for (const c of cands) if (polSig(c.pol) !== polSig(opt)) rows.push(c);
   rows.forEach(r=>{ const ex = solvePolicy(r.pol, P, S.rc, S.target, S.start);
     r.E = ex.E; r.taps = ex.taps; r.booms = ex.booms; });
@@ -813,10 +813,9 @@ function renderVerdict(){
     strip.appendChild(pre);
   }
   const whys = s => opt[s] !== 'M1'
-    ? `insures the ${boomTo(s)}★ re-climb`
-    : (s>=18 && s<=19) ? 'modes kill success'
-    : (s<=17) ? `boom → ${boomTo(s)}★, cheap`
-    : `re-climb from ${boomTo(s)}★ is fine`;
+    ? `a boom here would reset you to ${boomTo(s)}★`
+    : (s>=18 && s<=19) ? 'higher modes tank the success rate'
+    : `boom only resets to ${boomTo(s)}★ — cheap to redo`;
   for (const s of ds){
     const m = opt[s], d = document.createElement('div');
     d.className = 'pstar ' + (m==='M1' ? (policyKey(opt)==='bare' ? 'gold' : 'lvl0') : 'prot');
@@ -1015,7 +1014,13 @@ function renderBooms(){
   const rows = R.rows.slice(0, 2), mc = R.mc;
   $('boomLegend').innerHTML = rows.map(r=>
     `<span class="key"><span class="sw" style="background:${css(KEYCOL[r.key])}"></span>${r.label}</span>`).join('');
-  const K = 13;
+  // extend the axis until every series' tail is <1.5%, so the pooled "+" bar stays honest
+  let K = 9;
+  for (let k=9; k<=38; k++){
+    K = k;
+    const tail = Math.max(...rows.map(r=>mc[r.key].boomDist.slice(k-1).reduce((a,b)=>a+b,0)));
+    if (tail <= 0.015) break;
+  }
   const D = Object.fromEntries(rows.map(r=>{
     const d = mc[r.key].boomDist.slice(0, K);
     d[K-1] = mc[r.key].boomDist.slice(K-1).reduce((a,b)=>a+b,0);
@@ -1028,9 +1033,11 @@ function renderBooms(){
   for(let p=0;p<=3;p++){ const v=ymax*1.1*p/3;
     svgEl('line',{x1:padL,x2:W-padR,y1:Y(v),y2:Y(v),stroke:css('--grid'),'stroke-width':1},svg);
     svgEl('text',{x:padL-6,y:Y(v)+4,'text-anchor':'end'},svg).textContent=Math.round(v*100)+'%'; }
+  const labEvery = (K > 20 && W < 560) ? 4 : K > 16 ? 2 : 1;
   for(let i=0;i<K;i++){
     const cx = padL+i*slot+slot/2;
-    svgEl('text',{x:cx,y:H-12,'text-anchor':'middle'},svg).textContent = i===K-1? (K-1)+'+' : i;
+    if (i % labEvery === 0 || i === K-1)
+      svgEl('text',{x:cx,y:H-12,'text-anchor':'middle'},svg).textContent = i===K-1? (K-1)+'+' : i;
     rows.forEach((r,j)=>{
       const v=D[r.key][i], x=cx-bwid-1+j*(bwid+2);
       svgEl('path',{d:barPath(x,Y(v),bwid,Y(0)-Y(v),4),fill:css(KEYCOL[r.key])},svg);
