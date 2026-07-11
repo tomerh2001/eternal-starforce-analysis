@@ -1,4 +1,4 @@
-# Eternal Hat 0→22★ — Starforce Strategy (GMS v269)
+# Starforce Optimizer — when to safeguard (GMS v269)
 
 **📊 Live report: https://tomerh2001.github.io/eternal-starforce-analysis/**
 
@@ -15,7 +15,7 @@ encoded into the URL, so a shared link carries them:
 
 Defaults model the way people actually starforce: during the full 30% event.
 
-## TL;DR
+## TL;DR — default example (Lv 250 item, 2b spares, e.g. an Eternal hat)
 
 **During the event: no safeguard, no modes — Level 1 at every star.**
 Protection isn't even good tail insurance there (the p90 doesn't improve).
@@ -33,7 +33,7 @@ reduction): Lv2 @ 17★ + Lv3 @ 20–21★ — 55.4b expected.
 
 ## Assumptions
 
-- Lv 250 Eternal hat, clean spare price **2.0b** (consumed on every boom via trace transfer)
+- Works for any non-Superior item; defaults: **Lv 250, 2.0b spare** (consumed on every boom via trace transfer)
 - **MVP Black** (−10% meso on taps ≤16★), **guild castle Enhancement Altar** (passive Star Catch ×1.05)
 - Post-revamp mechanics: fails never drop stars; no boom below 15★;
   boom restores 15–19★→12★, 20★→15★, 21★→17★
