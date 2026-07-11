@@ -1140,9 +1140,10 @@ function renderSpend(){
   const o = R.rows[0], mc = R.mc[o.key];
   $('spendH2').textContent = `Where the ${F.b(o.E)} goes`;
   const rows = [];
-  if (S.start < 15){
-    const sub = mc.spend.slice(0,15).reduce((a,b)=>a+b,0);
-    rows.push([`${S.start}–14★`, sub, 'includes rebuilds from 12★ after 15–19★ booms']);
+  const sub = Array.from(mc.spend.slice(0,15)).reduce((a,b)=>a+b,0);
+  if (S.start < 15 || sub > 0){
+    rows.push([`${Math.min(S.start,12)}–14★`, sub,
+      S.start < 15 ? 'includes rebuilds from 12★ after 15–19★ booms' : 're-climbs from 12★ after 15–19★ booms']);
   }
   for (const s of decisionStars()) rows.push([s+'★', mc.spend[s], MODE[o.pol[s]].full]);
   for (let s=22; s<S.target; s++) rows.push([s+'★', mc.spend[s], 'no protection exists ≥22★']);
@@ -1201,9 +1202,21 @@ function renderRates(){
 const GOOD = '#0ca30c', CRIT = '#d03b3b';
 let simTimer = null, simEls = null;
 
+function reachableFloor(){
+  // closure over boom drops: a run from start can fall to 12/15/17/19/20 and re-climb
+  let lo = S.start, changed = true;
+  while (changed){
+    changed = false;
+    for (let s = Math.max(lo, 15); s < S.target; s++){
+      const b = boomTo(s);
+      if (b < lo){ lo = b; changed = true; }
+    }
+  }
+  return lo;
+}
 function buildSimTrack(){
   $('simTrack').innerHTML = '';
-  const from = S.start, to = S.target, n = to - from;
+  const from = reachableFloor(), to = S.target, n = Math.max(1, to - from);
   const W = chartW($('simTrack')), H=100, padL=16, padR=16, axisY=60;
   const X = s => padL + ((s-from)/n)*(W-padL-padR);
   const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`, role:'img',
@@ -1225,9 +1238,13 @@ function buildSimTrack(){
     boomLabels[s] = bl;
   }
   svgEl('text',{x:X(to),y:axisY-10,'text-anchor':'middle','font-size':13,class:'lab1'},svg).textContent = '🏁';
-  const cursor = svgEl('circle',{cx:X(from),cy:axisY,r:7,fill:css('--accent-mark'),
+  if (from < S.start){
+    svgEl('line',{x1:X(S.start),x2:X(S.start),y1:axisY-26,y2:axisY-8,stroke:css('--axis'),'stroke-width':1},svg);
+    svgEl('text',{x:X(S.start),y:axisY-30,'text-anchor':'middle','font-size':10.5},svg).textContent = 'start';
+  }
+  const cursor = svgEl('circle',{cx:X(S.start),cy:axisY,r:7,fill:css('--accent-mark'),
     stroke:css('--surface'),'stroke-width':2},svg);
-  simEls = { X, axisY, bars, boomLabels, cursor, maxBar:1, counts:{} };
+  simEls = { X, axisY, bars, boomLabels, cursor, maxBar:1, counts:{}, boomCounts:{} };
 }
 function simStats(cost, taps, booms, star){
   $('simStats').innerHTML =
@@ -1265,7 +1282,9 @@ function runSim(){
     else if (r < t.ps + t.pm){ msg = 'maintain'; }
     else {
       booms++; cost += S.rc;
-      const bl = els.boomLabels[star]; bl.textContent = '✕' + (booms>1?booms:'');
+      els.boomCounts[star] = (els.boomCounts[star]||0) + 1;
+      const bl = els.boomLabels[star];
+      bl.textContent = '✕' + (els.boomCounts[star] > 1 ? els.boomCounts[star] : '');
       const back = boomTo(star);
       msg = `💥 destroyed → back to ${back}★ (+1 spare)`;
       star = back;
