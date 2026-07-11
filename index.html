@@ -113,6 +113,7 @@
   .pstar.lvl0 .md { color:var(--ink2); }
   .pstar.gold { background:color-mix(in srgb, var(--accent-mark) 12%, var(--page)); border-color:var(--accent-mark); }
   .pstar.prot { background:color-mix(in srgb, var(--m3) 14%, var(--page)); border-color:var(--m3); }
+  .pstar[tabindex]:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
   .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:18px; }
   .tile { background:var(--page); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
   .tile .lab { font-size:12.5px; color:var(--muted); }
@@ -287,7 +288,7 @@
   </div>
   <div class="card" id="boomCard" style="margin-top:16px">
     <div class="charthead"><h3>How many spares you burn</h3>
-      <span class="hint">probability of finishing with exactly k booms</span></div>
+      <span class="hint" id="boomHint">probability of finishing with exactly k booms</span></div>
     <div class="legend" id="boomLegend"></div>
     <div id="boomPlot"></div>
     <details><summary>Data table</summary><div class="tblwrap" id="boomTable"></div></details>
@@ -763,6 +764,12 @@ function refresh(){
     r.E = ex.E; r.taps = ex.taps; r.booms = ex.booms; });
 
   R.P = P; R.opt = opt; R.vi = vi; R.rows = rows; R.mc = null;
+  R.devs = {};
+  for (const s of decisionStars()){
+    R.devs[s] = {};
+    for (const o of optionKeys(s))
+      R.devs[s][o] = o === opt[s] ? rows[0].E : solvePolicy({...opt, [s]:o}, P, S.rc, S.target, S.start).E;
+  }
 
   renderVerdict(); renderScenarios(); renderCompareIntro(); renderRange();
   renderDevMatrix(); renderSens(); renderRates(); resetSim();
@@ -812,16 +819,27 @@ function renderVerdict(){
     pre.innerHTML = `<div class="st">${S.start}–14★</div><div class="md">Just tap</div><div class="why">no boom risk</div>`;
     strip.appendChild(pre);
   }
-  const whys = s => opt[s] !== 'M1'
-    ? `a boom here would reset you to ${boomTo(s)}★`
-    : (s>=18 && s<=19) ? 'higher modes tank the success rate'
-    : `boom only resets to ${boomTo(s)}★ — cheap to redo`;
+  const fmtD = v => F.b(v, Math.abs(v) < 10e9 ? 2 : 1);
+  const stripTip = tipFor(strip.closest('.card') || strip);
   for (const s of ds){
     const m = opt[s], d = document.createElement('div');
+    const alts = optionKeys(s).filter(o=>o!==m);
+    const why = m === 'M1'
+      ? `protection loses ${fmtD(Math.min(...alts.map(o=>R.devs[s][o])) - R.rows[0].E)}`
+      : `saves ${fmtD(R.devs[s].M1 - R.rows[0].E)} vs bare`;
     d.className = 'pstar ' + (m==='M1' ? (policyKey(opt)==='bare' ? 'gold' : 'lvl0') : 'prot');
+    d.setAttribute('tabindex', '0');
     d.innerHTML = `<div class="st">${s}★ → ${s+1}★</div>
       <div class="md">${m==='M1' ? 'None' : MODE[m].full.replace(' (no protection)','').replace(' (0% boom)','')}</div>
-      <div class="why">${whys(s)}</div>`;
+      <div class="why">${why}</div>`;
+    const t = tapParams(s, m, R.P);
+    const vsTxt = alts.map(o=>`${MODE[o].lab} +${fmtD(R.devs[s][o] - R.rows[0].E)}`).join(' · ');
+    const tipHtml = `<b>${s}★ → ${s+1}★ · ${MODE[m].full}</b><br>` +
+      `${F.M(t.cost)}/tap · ${(t.ps*100).toFixed(1)}% success · ${(t.pb*100).toFixed(2)}% boom<br>` +
+      (t.pb > 0 ? `a boom burns a spare and resets you to ${boomTo(s)}★<br>` :
+        (s>=18 ? `0% boom, but success drops and cost is ×6.5<br>` : `0% boom for +200% of the tap cost<br>`)) +
+      `expected total if switched: ${vsTxt}`;
+    hover(d, stripTip, tipHtml);
     strip.appendChild(d);
   }
   if (S.target > 22){
@@ -859,9 +877,7 @@ function renderVerdict(){
   const alts = [];
   for (const s of decisionStars()) for (const opt2 of optionKeys(s)){
     if (opt2 === R.opt[s]) continue;
-    const pol = {...R.opt, [s]:opt2};
-    const E = solvePolicy(pol, R.P, S.rc, S.target, S.start).E;
-    alts.push([E, `${MODE[opt2].lab}@${s}★`]);
+    alts.push([R.devs[s][opt2], `${MODE[opt2].lab}@${s}★`]);
   }
   alts.sort((a,b)=>a[0]-b[0]);
   $('footAlt').textContent = alts.length ? ` Nearest alternatives right now: ` +
@@ -1014,19 +1030,28 @@ function renderBooms(){
   const rows = R.rows.slice(0, 2), mc = R.mc;
   $('boomLegend').innerHTML = rows.map(r=>
     `<span class="key"><span class="sw" style="background:${css(KEYCOL[r.key])}"></span>${r.label}</span>`).join('');
-  // extend the axis until every series' tail is <1.5%, so the pooled "+" bar stays honest
+  // draw exact P(k) only — never pool a tail into the last bar; disclose what's cut instead
   let K = 9;
   for (let k=9; k<=38; k++){
     K = k;
-    const tail = Math.max(...rows.map(r=>mc[r.key].boomDist.slice(k-1).reduce((a,b)=>a+b,0)));
-    if (tail <= 0.015) break;
+    const tail = Math.max(...rows.map(r=>mc[r.key].boomDist.slice(k).reduce((a,b)=>a+b,0)));
+    if (tail <= 0.01) break;
   }
-  const D = Object.fromEntries(rows.map(r=>{
-    const d = mc[r.key].boomDist.slice(0, K);
-    d[K-1] = mc[r.key].boomDist.slice(K-1).reduce((a,b)=>a+b,0);
-    return [r.key, d]; }));
+  const D = Object.fromEntries(rows.map(r=>[r.key, mc[r.key].boomDist.slice(0, K)]));
+  const tails = rows.map(r=>[r.label, mc[r.key].boomDist.slice(K).reduce((a,b)=>a+b,0)]);
+  const tailNote = tails.filter(t=>t[1] >= 0.005)
+    .map(t=>`${t[0]}: ${(t[1]*100).toFixed(0)}% of runs exceed ${K-1} booms`).join(' · ');
+  $('boomHint').textContent = 'probability of finishing with exactly k booms' + (tailNote ? ' · ' + tailNote : '');
+  const shown = Math.max(...rows.flatMap(r=>D[r.key]));
+  if (shown < 0.004){
+    $('boomPlot').innerHTML = `<p style="font-size:13px;color:var(--muted);margin:14px 0">` +
+      `Nearly every run at these settings exceeds ${K-1} booms — too spread out to chart. The data table has the tail.</p>`;
+    $('boomTable').innerHTML = '<table><tr><th>Booms</th>'+rows.map(r=>`<th>${r.label}</th>`).join('')+'</tr>' +
+      `<tr><td>${K}+</td>` + rows.map(r=>`<td>${(mc[r.key].boomDist.slice(K).reduce((a,b)=>a+b,0)*100).toFixed(1)}%</td>`).join('') + '</tr></table>';
+    return;
+  }
   const W = chartW($('boomPlot')), H=240, padL=46, padR=14, padT=14, padB=32;
-  const ymax = Math.max(...rows.flatMap(r=>D[r.key]));
+  const ymax = Math.max(1e-6, ...rows.flatMap(r=>D[r.key]));
   const slot=(W-padL-padR)/K, bwid=Math.min(24,(slot-10)/2);
   const Y=v=>padT+(H-padT-padB)*(1-v/(ymax*1.1));
   const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Boom count probabilities'},$('boomPlot'));
@@ -1037,20 +1062,21 @@ function renderBooms(){
   for(let i=0;i<K;i++){
     const cx = padL+i*slot+slot/2;
     if (i % labEvery === 0 || i === K-1)
-      svgEl('text',{x:cx,y:H-12,'text-anchor':'middle'},svg).textContent = i===K-1? (K-1)+'+' : i;
+      svgEl('text',{x:cx,y:H-12,'text-anchor':'middle'},svg).textContent = i;
     rows.forEach((r,j)=>{
       const v=D[r.key][i], x=cx-bwid-1+j*(bwid+2);
       svgEl('path',{d:barPath(x,Y(v),bwid,Y(0)-Y(v),4),fill:css(KEYCOL[r.key])},svg);
     });
     const hit = svgEl('rect',{x:cx-slot/2,y:padT,width:slot,height:H-padT-padB,class:'hit',tabindex:0,
       role:'img','aria-label':`${i} booms: ` + rows.map(r=>`${r.label} ${(D[r.key][i]*100).toFixed(1)}%`).join(', ')},svg);
-    hover(hit, tip, `<b>${i===K-1?'13 or more':i} boom${i===1?'':'s'}</b><br>`+rows.map(r=>
+    hover(hit, tip, `<b>${i} boom${i===1?'':'s'}</b><br>`+rows.map(r=>
       `<span style="color:${css(KEYCOL[r.key])}">●</span> ${r.label}: <b>${(D[r.key][i]*100).toFixed(1)}%</b>`).join('<br>'));
   }
   svgEl('text',{x:padL+slot/2,y:Y(D[rows[0].key][0])-8,class:'lab1','text-anchor':'middle'},svg)
     .textContent = 'P(0)='+ (D[rows[0].key][0]*100).toFixed(0)+'%';
   $('boomTable').innerHTML = '<table><tr><th>Booms</th>'+rows.map(r=>`<th>${r.label}</th>`).join('')+'</tr>'+
-    Array.from({length:K},(_,i)=>`<tr><td>${i===K-1?(K-1)+'+':i}</td>`+rows.map(r=>`<td>${(D[r.key][i]*100).toFixed(2)}%</td>`).join('')+'</tr>').join('')+'</table>';
+    Array.from({length:K},(_,i)=>`<tr><td>${i}</td>`+rows.map(r=>`<td>${(D[r.key][i]*100).toFixed(2)}%</td>`).join('')+'</tr>').join('') +
+    `<tr><td>${K}+</td>` + rows.map(r=>`<td>${(mc[r.key].boomDist.slice(K).reduce((a,b)=>a+b,0)*100).toFixed(2)}%</td>`).join('') + '</tr></table>';
 }
 
 function renderDevMatrix(){
@@ -1065,8 +1091,7 @@ function renderDevMatrix(){
     const sw = c==='M1' ? '' : `<span class="sw" style="background:${c==='M2'?css('--m2'):c==='M3'?css('--m3'):css('--m4')};margin-right:5px;vertical-align:-1px"></span>`;
     return `<th>${sw}${head[c]}</th>`; }).join('') + '</tr>';
   for (const s of decisionStars()){
-    const vals = {};
-    for (const o of optionKeys(s)) vals[o] = solvePolicy({...R.opt, [s]:o}, R.P, S.rc, S.target, S.start).E;
+    const vals = R.devs[s];
     const best = Math.min(...Object.values(vals));
     html += `<tr><td><b>${s}★</b> → ${s+1}★</td>`;
     for (const c of cols){
