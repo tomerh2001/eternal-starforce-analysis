@@ -2,11 +2,18 @@
 
 **📊 Live report: https://tomerh2001.github.io/eternal-starforce-analysis/**
 
-Exact expected-cost optimization of every safeguard decision when starforcing a
-Lv 250 Eternal hat from 0★ to 22★ under the new GMS Star Force system
-(v.264 revamp + v.269 Enhancement Mode levels 1–4) — centered on the way people
-actually starforce: **during the 30% event** (Shining Star Force / Special Sunny
-Sunday: 30% off cost, 30% less destruction ≤21★).
+**Interactive calculator + analysis.** Exact expected-cost optimization of every
+safeguard decision under the new GMS Star Force system (v.264 revamp + v.269
+Enhancement Mode levels 1–4), solved live in the browser — value iteration for
+the optimal per-star policy, exact linear solves per strategy, and a 50k-run
+Monte Carlo for the spreads. Every assumption is adjustable and settings are
+encoded into the URL, so a shared link carries them:
+
+- **Event**: 30% off + boom −30% (SSF / Special Sunny Sunday, default) · 30% off only · no event
+- **MVP tier** (none / 3% / 5% / 10%), **Star Catch** on/off (guild altar)
+- **Spare cost** (0–30b), **item level** (100–300), **star range** (from/to, up to 22★)
+
+Defaults model the way people actually starforce: during the full 30% event.
 
 ## TL;DR
 
@@ -42,7 +49,7 @@ starts at ~1.5b (Lv3 @ 20–21★).
 - Star count as a Markov chain; expected cost per policy solved exactly (linear system)
 - All 4⁷ = 16,384 per-star policies enumerated per scenario; optima cross-checked with value iteration
 - 300,000-trial Monte Carlo for medians, percentiles and boom distributions
-- Reproduce: `pip install numpy && cd analysis && python3 run_scenarios.py` (writes `results2.json`)
+- Reproduce offline: `pip install numpy && cd analysis && python3 run_scenarios.py` (writes `results2.json`) — the page's in-browser solver is cross-validated against this reference implementation (159 checks)
 
 ## Data sources
 
