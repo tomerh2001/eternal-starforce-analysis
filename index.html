@@ -78,13 +78,16 @@
   .ctl select, .ctl input[type=number] { font:14px/1.2 system-ui,sans-serif; color:var(--ink);
     background:var(--page); border:1px solid var(--border); border-radius:8px; padding:8px 10px; min-width:110px; }
   .ctl input[type=number] { width:110px; font-variant-numeric:tabular-nums; }
-  .seg { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .seg { display:flex; flex-wrap:wrap; border:1px solid var(--border); border-radius:8px; overflow:hidden; max-width:100%; }
+  @media (max-width:480px){ .seg button { padding:8px 9px; font-size:12.5px; } }
   .seg button { font:13.5px system-ui,sans-serif; padding:8px 12px; background:var(--page);
     color:var(--ink2); border:none; cursor:pointer; }
   .seg button + button { border-left:1px solid var(--border); }
   .seg button[aria-pressed="true"] { background:color-mix(in srgb, var(--accent-mark) 18%, var(--page)); color:var(--ink); font-weight:600; }
   .seg button:focus-visible, .ctl select:focus-visible, .ctl input:focus-visible, .check input:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
-  .check { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink2); padding-bottom:9px; }
+  .check { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--ink2); padding-bottom:9px; white-space:nowrap; }
+  .seg button, .legend .key, .simstats > span, .tile .lab, .eyebrow { white-space:nowrap; }
+  .ctl { flex:0 0 auto; max-width:100%; }
   .mcstatus { font-size:12.5px; color:var(--muted); min-height:18px; margin-top:10px; }
   .mcstatus .bar { display:inline-block; width:120px; height:4px; border-radius:2px; background:var(--grid);
     vertical-align:middle; margin-left:8px; overflow:hidden; }
@@ -190,13 +193,13 @@
         </select>
       </div>
       <div class="ctl"><label for="ctlSpare">Spare cost (b)</label>
-        <input id="ctlSpare" type="number" min="0" max="30" step="0.1" value="2.0"></div>
+        <input id="ctlSpare" type="number" min="0" max="999" step="0.1" value="2.0"></div>
       <div class="ctl"><label for="ctlLevel">Item level</label>
         <input id="ctlLevel" type="number" min="100" max="300" step="10" value="250"></div>
       <div class="ctl"><label for="ctlStart">From ★</label>
-        <input id="ctlStart" type="number" min="0" max="21" step="1" value="0"></div>
+        <input id="ctlStart" type="number" min="0" max="29" step="1" value="0"></div>
       <div class="ctl"><label for="ctlTarget">To ★</label>
-        <input id="ctlTarget" type="number" min="16" max="22" step="1" value="22"></div>
+        <input id="ctlTarget" type="number" min="1" max="30" step="1" value="22"></div>
       <label class="check"><input id="ctlCatch" type="checkbox" checked>
         Star Catch ×1.05 <span style="color:var(--muted)">(guild altar)</span></label>
     </div>
@@ -289,7 +292,7 @@
 <section id="sens">
   <p class="eyebrow">Generalize it</p>
   <h2>How the policy shifts with spare price</h2>
-  <p>The same solve, sweeping spare price 0→20b. Find any item and read down.
+  <p>The same solve, swept across spare prices. Find any item and read down.
   <span id="flipNote"></span></p>
   <div class="card" id="sensCard">
     <div class="charthead"><h3>Cost-optimal setting per star, by spare price</h3>
@@ -352,8 +355,12 @@
 
 <script>
 /* ================= MODEL (ported from the verified Python solver) ============= */
-const SUCC_BASE = [.95,.90,.85,.85,.80,.75,.70,.65,.60,.55,.50,.45,.40,.35,.30,
-                   .30,.30,.15,.15,.15,.30,.15];
+const RATES = [  // [success, boom] per current star; maintain = 1 - s - b
+  [.95,0],[.90,0],[.85,0],[.85,0],[.80,0],[.75,0],[.70,0],[.65,0],[.60,0],[.55,0],
+  [.50,0],[.45,0],[.40,0],[.35,0],[.30,0],
+  [.30,.021],[.30,.021],[.15,.068],[.15,.068],[.15,.085],[.30,.105],[.15,.1275],
+  [.15,.17],[.10,.18],[.10,.18],[.10,.18],[.07,.186],[.05,.19],[.03,.194],[.01,.198]];
+const MAX_STAR = 30;
 const COEF = {};
 for (let s=0; s<10; s++) COEF[s] = {div:2500, expo:1, mult:1};
 Object.assign(COEF, {
@@ -363,6 +370,7 @@ Object.assign(COEF, {
   17:{div:20000,expo:2.7,mult:4/3}, 18:{div:20000,expo:2.7,mult:20/7},
   19:{div:20000,expo:2.7,mult:40/9}, 20:{div:20000,expo:2.7,mult:1},
   21:{div:20000,expo:2.7,mult:8/5} });
+for (let s2=22; s2<30; s2++) COEF[s2] = {div:20000, expo:2.7, mult:1};
 const EM = {  // star -> option -> [costMult|'SG', success, boom]
   15:{M1:[1,.30,.021], M2:[1.5,.30,.014], M3:[2.5,.30,.007], SG:['SG',.30,0]},
   16:{M1:[1,.30,.021], M2:[1.5,.30,.014], M3:[2.5,.30,.007], SG:['SG',.30,0]},
@@ -373,8 +381,8 @@ const EM = {  // star -> option -> [costMult|'SG', success, boom]
   21:{M1:[1,.15,.1275], M2:[2,.12,.088], M3:[3.5,.10,.045], M4:[6.5,.08,0]},
 };
 const CATCH = 1.05;
-const boomTo = s => s < 20 ? 12 : s === 20 ? 15 : 17;
-const optionKeys = s => Object.keys(EM[s]);
+const boomTo = s => s < 20 ? 12 : s === 20 ? 15 : s < 23 ? 17 : s < 26 ? 19 : 20;
+const optionKeys = s => EM[s] ? Object.keys(EM[s]) : ['M1'];
 
 function baseCost(s, level){
   const c = COEF[s], lt = Math.floor(level/10)*10;
@@ -385,16 +393,18 @@ function tapParams(s, opt, P){
   const costEv = P.event !== 'none', boomEv = P.event === 'ssf';
   const mvp = s <= 16 ? P.mvp : 0;
   let mult, succ, boom;
-  if (s < 15){
-    mult = 1 - mvp; if (costEv) mult -= 0.30;
-    succ = SUCC_BASE[s]; boom = 0;
-  } else {
-    const [cm, sv, bv] = EM[s][opt];
+  const em = s >= 15 && EM[s] ? EM[s][opt] : null;
+  if (em){
+    const [cm, sv, bv] = em;
     succ = sv; boom = bv;
     if (cm === 'SG'){ mult = 1 - mvp; if (costEv) mult -= 0.30; mult += 2; }
     else { mult = cm - mvp; if (costEv) mult *= 0.70; }
-    if (boomEv) boom *= 0.70;
+  } else {
+    // below 15* (no boom) and 22*+ (no modes or safeguard exist)
+    mult = 1 - mvp; if (costEv) mult -= 0.30;
+    succ = RATES[s][0]; boom = RATES[s][1];
   }
+  if (boomEv && s <= 21) boom *= 0.70;   // event boom cut applies at 21* and below only
   let ps = succ;
   if (P.catch) ps = Math.min(1, succ * CATCH);
   let pm = 1 - succ - boom, pb = boom;
@@ -455,53 +465,43 @@ function solvePolicy(pol, P, rc, target, start){
 }
 
 function valueIter(P, rc, target){
-  const sub = [], opts = {};
-  for (let s=0; s<Math.min(15,target); s++) sub[s] = tapParams(s, null, P);
-  for (let s=15; s<target; s++){ opts[s] = {}; for (const o of optionKeys(s)) opts[s][o] = tapParams(s, o, P); }
-  let E = new Array(target+1).fill(0);
-  for (let it=0; it<100000; it++){
-    const nE = E.slice();
-    for (let s=target-1; s>=0; s--){
-      if (s < 15){ const {cost,ps,pm} = sub[s]; nE[s] = (cost + ps*nE[s+1]) / (1-pm); }
-      else {
-        let best = Infinity;
-        for (const o of optionKeys(s)){
-          const {cost,ps,pm,pb} = opts[s][o];
-          const v = (cost + ps*nE[s+1] + pb*(rc + nE[boomTo(s)])) / (1-pm);
-          if (v < best - 1e-9) best = v;
-        }
-        nE[s] = best;
+  // exact policy iteration: solve the linear system for the current policy,
+  // greedily improve per star, repeat until stable. Exact optimum, no tolerance.
+  const ds = []; for (let s=15; s<Math.min(target,22); s++) ds.push(s);
+  const pol = {}; ds.forEach(s=>pol[s]='M1');
+  let Es = null;
+  for (let it=0; it<64; it++){
+    Es = solvePolicy(pol, P, rc, target, 0).Es;
+    let changed = false;
+    for (const s of ds){
+      let bo = null, bv = Infinity;
+      for (const o of optionKeys(s)){
+        const {cost, ps, pm, pb} = tapParams(s, o, P);
+        const v = (cost + ps*Es[s+1] + pb*(rc + Es[boomTo(s)])) / (1-pm);
+        if (v < bv - 1e-9){ bv = v; bo = o; }
       }
+      if (bo !== pol[s]){ pol[s] = bo; changed = true; }
     }
-    let d = 0; for (let s=0; s<target; s++) d = Math.max(d, Math.abs(nE[s]-E[s]));
-    E = nE; if (d < 1) break;
+    if (!changed) break;
   }
-  const pol = {};
-  for (let s=15; s<target; s++){
-    let bo = null, bv = Infinity;
-    for (const o of optionKeys(s)){
-      const {cost,ps,pm,pb} = opts[s][o];
-      const v = (cost + ps*E[s+1] + pb*(rc + E[boomTo(s)])) / (1-pm);
-      if (v < bv - 1e-9){ bv = v; bo = o; }
-    }
-    pol[s] = bo;
-  }
-  return { pol, E0: E[0], Es: E };
+  Es = solvePolicy(pol, P, rc, target, 0).Es;
+  return { pol, E0: Es[0], Es };
 }
 
-function sweepRC(P, target, start){
+function sweepRC(P, target, start, sweepMax){
+  sweepMax = sweepMax || 20e9;
   const seg = {}, cur = {}, st = {};
-  const stars = []; for (let s=15; s<target; s++) stars.push(s);
+  const stars = []; for (let s=15; s<Math.min(target,22); s++) stars.push(s);
   stars.forEach(s=>{ seg[s]=[]; cur[s]=null; });
   for (let i=0; i<=80; i++){
-    const rc = i*0.25e9;
+    const rc = i*(sweepMax/80);
     const { pol } = valueIter(P, rc, target);
     for (const s of stars){
       if (cur[s] === null){ cur[s] = pol[s]; st[s] = rc; }
       else if (pol[s] !== cur[s]){ seg[s].push([st[s], rc, cur[s]]); cur[s] = pol[s]; st[s] = rc; }
     }
   }
-  for (const s of stars) seg[s].push([st[s], 20e9, cur[s]]);
+  for (const s of stars) seg[s].push([st[s], sweepMax, cur[s]]);
   return seg;
 }
 
@@ -526,7 +526,7 @@ function monteCarlo(list, P, rc, target, start, trials, onProgress, onDone){
     for (let k=0; k<n; k++) bd[Math.min(job.booms[k],15)]++;
     const spend = new Float64Array(target);
     for (let s=0; s<target; s++) spend[s] = job.spend[s]/n;
-    return { key: job.row.key, n, totals: sorted, boomDist: bd.map(c=>c/n),
+    return { key: job.row.key, n, trunc: job.trunc||0, totals: sorted, boomDist: bd.map(c=>c/n),
       spend, p10:q(.10), p25:q(.25), median:q(.50), p75:q(.75), p90:q(.90), p99:q(.99) };
   }
   let j = 0, lastPartial = 0;
@@ -535,13 +535,14 @@ function monteCarlo(list, P, rc, target, start, trials, onProgress, onDone){
     while (j < jobs.length){
       const job = jobs[j];
       while (job.i < trials){
-        let star = start, tot = 0, bm = 0;
-        while (star < target){
+        let star = start, tot = 0, bm = 0, guard = 0;
+        while (star < target && ++guard <= 2e6){
           tot += job.cost[star]; job.spend[star] += job.cost[star];
           const r = Math.random();
           if (r < job.ps[star]) star++;
           else if (r >= job.psm[star]){ tot += rc; bm++; star = job.bto[star]; }
         }
+        if (star < target) job.trunc = (job.trunc||0) + 1;
         job.totals[job.i] = tot; job.booms[job.i] = bm; job.i++;
         if ((job.i & 255) === 0 && Date.now() - t0 >= 14) break;
       }
@@ -571,10 +572,10 @@ const S = { event:'ssf', mvp:0.10, catch:true, rc:2.0e9, level:250, start:0, tar
   if (h.get('ev') && ['ssf','30off','none'].includes(h.get('ev'))) S.event = h.get('ev');
   if (h.get('mvp') !== null && ['0','0.03','0.05','0.1','0.10'].includes(h.get('mvp'))) S.mvp = +h.get('mvp');
   if (h.get('sc') === '0') S.catch = false;
-  if (h.get('rc') !== null && isFinite(+h.get('rc'))) S.rc = Math.min(30, Math.max(0, +h.get('rc'))) * 1e9;
+  if (h.get('rc') !== null && isFinite(+h.get('rc'))) S.rc = Math.min(999, Math.max(0, +h.get('rc'))) * 1e9;
   if (h.get('lv') !== null && isFinite(+h.get('lv'))) S.level = Math.min(300, Math.max(100, Math.round(+h.get('lv')/10)*10));
-  if (h.get('from') !== null && isFinite(+h.get('from'))) S.start = Math.min(21, Math.max(0, Math.round(+h.get('from'))));
-  if (h.get('to') !== null && isFinite(+h.get('to'))) S.target = Math.min(22, Math.max(16, Math.round(+h.get('to'))));
+  if (h.get('from') !== null && isFinite(+h.get('from'))) S.start = Math.min(29, Math.max(0, Math.round(+h.get('from'))));
+  if (h.get('to') !== null && isFinite(+h.get('to'))) S.target = Math.min(30, Math.max(1, Math.round(+h.get('to'))));
   if (S.start >= S.target) S.start = S.target - 1;
 })();
 function writeHash(){
@@ -604,7 +605,7 @@ function bindControls(){
   $('ctlSpare').value = (S.rc/1e9).toFixed(1);
   $('ctlSpare').addEventListener('input', e=>{
     const v = +e.target.value;
-    if (isFinite(v) && v >= 0 && v <= 30){ S.rc = v*1e9; refreshDebounced(); }
+    if (isFinite(v) && v >= 0 && v <= 999){ S.rc = v*1e9; refreshDebounced(); }
   });
   $('ctlLevel').value = S.level;
   $('ctlLevel').addEventListener('change', e=>{
@@ -613,13 +614,13 @@ function bindControls(){
   });
   $('ctlStart').value = S.start;
   $('ctlStart').addEventListener('change', e=>{
-    let v = Math.min(21, Math.max(0, Math.round(+e.target.value||0)));
+    let v = Math.min(29, Math.max(0, Math.round(+e.target.value||0)));
     if (v >= S.target) v = S.target-1;
     e.target.value = v; S.start = v; refresh();
   });
   $('ctlTarget').value = S.target;
   $('ctlTarget').addEventListener('change', e=>{
-    let v = Math.min(22, Math.max(16, Math.round(+e.target.value||22)));
+    let v = Math.min(30, Math.max(1, Math.round(+e.target.value||22)));
     e.target.value = v; S.target = v;
     if (S.start >= v){ S.start = v-1; $('ctlStart').value = S.start; }
     refresh();
@@ -632,7 +633,15 @@ function refreshDebounced(){ clearTimeout(debTimer); debTimer = setTimeout(refre
 
 /* ================= SHARED HELPERS ============================================= */
 const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
-const F = { b:(v,d=1)=>(v/1e9).toFixed(d)+'b', M:v=>Math.round(v/1e6)+'M', pct:(v,d=1)=>(v*100).toFixed(d)+'%' };
+const F = { b:(v,d=1)=> Math.abs(v) >= 999.95e9 ? (v/1e12).toFixed(2)+'t' : (v/1e9).toFixed(d)+'b',
+  M:v=>Math.round(v/1e6)+'M', pct:(v,d=1)=>(v*100).toFixed(d)+'%' };
+const fmtN = (v, d=1) => v >= 1000 ? Math.round(v).toLocaleString() : v.toFixed(d);
+const axisFmt = v => v === 0 ? '0' : Math.abs(v) >= 1e12 ? (v/1e12).toFixed(v%1e12?1:0)+'t' : Math.round(v/1e9)+'b';
+function niceStep(range, ticks){
+  const ladder = [1e9,2.5e9,5e9,10e9,25e9,50e9,100e9,250e9,500e9,1e12,2.5e12,5e12,10e12,25e12,50e12,100e12];
+  for (const st of ladder) if (range/st <= ticks) return st;
+  return ladder[ladder.length-1];
+}
 const MODE = { M1:{lab:'None', full:'Level 1 (no protection)'}, M2:{lab:'Lv 2', full:'Level 2'},
   M3:{lab:'Lv 3', full:'Level 3'}, M4:{lab:'Lv 4', full:'Level 4 (0% boom)'}, SG:{lab:'SG', full:'Classic Safeguard (0% boom)'} };
 const MCOL = m => m==='M2' ? css('--m2') : m==='M3' ? css('--m3') : (m==='M4'||m==='SG') ? css('--m4') : 'none';
@@ -665,14 +674,29 @@ function hover(hit, tip, html){
 }
 function chartW(el){ const w = el && el.clientWidth ? el.clientWidth : 920;
   return Math.max(340, Math.min(920, w)); }
-function decisionStars(){ const a=[]; for (let s=15; s<S.target; s++) a.push(s); return a; }
+function decisionStars(){ const a=[]; for (let s=15; s<Math.min(S.target,22); s++) a.push(s); return a; }
 function polSig(pol){ return decisionStars().map(s=>pol[s]).join(','); }
 function protectedList(pol){
   return decisionStars().filter(s=>pol[s]!=='M1').map(s=>`${MODE[pol[s]].lab} @ ${s}★`);
 }
+function groupProt(pol){   // consecutive same-mode stars → "Lv 4 @ 19–21★"
+  const ds = decisionStars(), out = [];
+  let i = 0;
+  while (i < ds.length){
+    const m = pol[ds[i]];
+    if (m === 'M1'){ i++; continue; }
+    let j = i;
+    while (j+1 < ds.length && pol[ds[j+1]] === m && ds[j+1] === ds[j]+1) j++;
+    out.push(`${MODE[m].lab} @ ${ds[i]}${j>i ? '–'+ds[j] : ''}★`);
+    i = j+1;
+  }
+  return out;
+}
 function shortVerdict(pol){
-  const p = protectedList(pol);
-  return p.length ? p.join(', ') + ', bare elsewhere' : 'all bare';
+  const p = groupProt(pol);
+  if (!p.length) return 'all bare';
+  const allProt = decisionStars().every(s=>pol[s]!=='M1');
+  return p.join(', ') + (allProt ? '' : ', bare elsewhere');
 }
 function compactDesc(key, pol, maxLen){
   const fixed = { bare:'Level 1 everywhere', lv3:'Lv 3 at 20\u201321\u2605 only',
@@ -724,9 +748,12 @@ function refresh(){
   renderDevMatrix(); renderSens(); renderRates(); resetSim();
   renderHistPlaceholder();
 
-  // Monte Carlo (async) — charts fill in live as runs accumulate
+  // Monte Carlo (async) — charts fill in live as runs accumulate.
+  // Trial count adapts to run length so heavy configs (e.g. 0→30) stay responsive.
   const token = ++mcToken;
-  const TRIALS = 50000;
+  const maxTaps = Math.max(...rows.map(r=>r.taps), 1);
+  const TRIALS = Math.max(12, Math.min(50000, Math.floor(15e6 / maxTaps)));
+  R.trials = TRIALS;
   const status = $('mcStatus');
   status.innerHTML = '<span id="mcText">Rolling dice…</span> <span class="bar"><i id="mcBar"></i></span>';
   const applyMC = results => {
@@ -738,7 +765,7 @@ function refresh(){
       if (token !== mcToken) return;
       const b = $('mcBar'), t = $('mcText');
       if (b) b.style.width = (frac*100).toFixed(0)+'%';
-      if (t) t.textContent = `Simulating — ${Math.round(frac*R.rows.length*TRIALS).toLocaleString()} of ${(R.rows.length*TRIALS).toLocaleString()} runs`;
+      if (t) t.textContent = `Simulating — ${Math.round(frac*R.rows.length*TRIALS).toLocaleString()} of ${(R.rows.length*TRIALS).toLocaleString()} runs` + (TRIALS<50000 ? ' (long runs — fewer trials)' : '');
       if (partial) applyMC(partial);
     },
     results => {
@@ -752,10 +779,13 @@ function refresh(){
 function renderVerdict(){
   document.querySelectorAll('.scenLabel').forEach(e=>e.textContent = EVLABEL[S.event]);
   const opt = R.opt, ds = decisionStars();
-  const prot = protectedList(opt);
-  $('verdictH2').textContent = prot.length
-    ? `Protect ${prot.join(' and ')} — bare everywhere else`
-    : 'No safeguard, no modes — Level 1 at every single star';
+  const prot = groupProt(opt);
+  const allProt = decisionStars().length && decisionStars().every(s=>opt[s]!=='M1');
+  $('verdictH2').textContent = !decisionStars().length
+    ? 'Nothing to decide in this range — just tap'
+    : prot.length
+      ? `Protect ${prot.join(' · ')}${allProt ? '' : ' — bare everywhere else'}`
+      : 'No safeguard, no modes — Level 1 at every single star';
   const strip = $('policyStrip'); strip.innerHTML = '';
   if (S.start < 15){
     const pre = document.createElement('div'); pre.className = 'pstar lvl0';
@@ -775,15 +805,21 @@ function renderVerdict(){
       <div class="why">${whys(s)}</div>`;
     strip.appendChild(d);
   }
+  if (S.target > 22){
+    const d = document.createElement('div'); d.className = 'pstar lvl0';
+    d.innerHTML = `<div class="st">${Math.max(22,S.start)}–${S.target-1}★</div><div class="md">No options</div>
+      <div class="why">protection ends at 21★</div>`;
+    strip.appendChild(d);
+  }
   $('stripNote').textContent = `“None” = Enhancement Mode Level 1. Settings: ${EVLABEL[S.event]}, ` +
     `MVP ${S.mvp ? (S.mvp*100)+'%' : 'off'}, star catch ${S.catch?'on':'off'}, spare ${F.b(S.rc)}, ` +
     `Lv ${S.level}, ${S.start}★ → ${S.target}★.`;
   const o = R.rows[0];
   $('tileE').textContent = F.b(o.E);
-  $('tileENote').textContent = `≈ ${(o.E/Math.max(S.rc,1)).toFixed(0)} spares’ worth`;
-  $('tileBooms').textContent = o.booms.toFixed(1);
+  $('tileENote').textContent = `≈ ${fmtN(o.E/Math.max(S.rc,1), 0)} spares’ worth`;
+  $('tileBooms').textContent = fmtN(o.booms);
   $('tileBoomsNote').textContent = `≈ ${F.b(o.booms*S.rc)} in spares`;
-  $('tileTaps').textContent = Math.round(o.taps);
+  $('tileTaps').textContent = fmtN(o.taps, 0);
   $('tileTapsNote').textContent = S.event==='none' ? 'no event discount' : 'all at −30% cost';
   $('tileMed').textContent = '…'; $('tileSpread').textContent = 'simulating…';
   // callout: if optimal is bare, price the popular upgrade; else price skipping protection
@@ -791,14 +827,14 @@ function renderVerdict(){
   if (R.rows[0].key === 'bare'){
     const alt = others.find(r=>r.key==='lv3') || others.find(r=>r.key==='sg');
     $('varianceCallout').innerHTML = alt ? `<b>Thinking of ${alt.label} anyway?</b> With these settings it costs ` +
-      `<b>+${F.b(alt.E - o.E,2)}</b> expected and cuts expected booms from ${o.booms.toFixed(1)} to ` +
-      `${alt.booms.toFixed(1)}. Check the distributions below before paying for peace of mind — ` +
+      `<b>+${F.b(alt.E - o.E,2)}</b> expected and cuts expected booms from ${fmtN(o.booms)} to ` +
+      `${fmtN(alt.booms)}. Check the distributions below before paying for peace of mind — ` +
       `protection often fails to improve even the p90.` : '';
   } else {
     const bare = others.find(r=>r.key==='bare');
     $('varianceCallout').innerHTML = bare ? `<b>Tempted to skip protection?</b> With these settings ` +
       `going all bare costs <b>+${F.b(bare.E - o.E,2)}</b> expected and raises expected booms from ` +
-      `${o.booms.toFixed(1)} to ${bare.booms.toFixed(1)} — check the distributions below; ` +
+      `${fmtN(o.booms)} to ${fmtN(bare.booms)} — check the distributions below; ` +
       `bare is often cheaper in the median run but heavier in the tail.` : '';
   }
   const alts = [];
@@ -809,8 +845,8 @@ function renderVerdict(){
     alts.push([E, `${MODE[opt2].lab}@${s}★`]);
   }
   alts.sort((a,b)=>a[0]-b[0]);
-  $('footAlt').textContent = ` Nearest alternatives right now: ` +
-    alts.slice(0,2).map(a=>`${a[1]} (+${F.b(a[0]-R.rows[0].E,2)})`).join(' · ') + '.';
+  $('footAlt').textContent = alts.length ? ` Nearest alternatives right now: ` +
+    alts.slice(0,2).map(a=>`${a[1]} (+${F.b(a[0]-R.rows[0].E,2)})`).join(' · ') + '.' : '';
 }
 
 function renderTilesMC(){
@@ -846,14 +882,14 @@ function renderRange(){
   const W = chartW($('rangePlot')), rowH=52, padR=W<560?46:70, padT=8;
   const padL = W<560 ? 136 : 206;
   const H = padT + rowH*rows.length + 34;
-  const hi = Math.max(...rows.map(r=> mc && mc[r.key] ? mc[r.key].p90 : r.E));
+  const hi = Math.max(...rows.map(r=> Math.max(r.E, mc && mc[r.key] ? mc[r.key].p90 : 0)));
   const xmax = hi * 1.18;
-  const step = xmax > 240e9 ? 50e9 : xmax > 120e9 ? 25e9 : xmax > 48e9 ? 10e9 : 5e9;
+  const step = niceStep(xmax, 8);
   const X = v => padL + (v/xmax)*(W-padL-padR);
   const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`, role:'img','aria-label':'Expected cost and run spread per strategy'}, $('rangePlot'));
   for (let g=0; g<=xmax; g+=step){
     svgEl('line',{x1:X(g),x2:X(g),y1:padT,y2:H-30,stroke:css('--grid'),'stroke-width':1},svg);
-    svgEl('text',{x:X(g),y:H-14,'text-anchor':'middle'},svg).textContent = g/1e9 + (g? 'b':'');
+    svgEl('text',{x:X(g),y:H-14,'text-anchor':'middle'},svg).textContent = axisFmt(g);
   }
   rows.forEach((r,i)=>{
     const y = padT + i*rowH + rowH/2, col = css(KEYCOL[r.key]);
@@ -904,7 +940,9 @@ function renderHist(){
   const rawMax = Math.max(...rows.map(r=>mc[r.key].p99));
   const xmax = Math.max(25e9, Math.ceil(rawMax*1.1/25e9)*25e9);
   const bins = 60, bw$ = xmax/bins;
-  $('histHint').textContent = `share of runs per ${F.b(bw$, bw$>=1e9?1:2)} bucket · last bucket pools runs above ${F.b(xmax,0)}`;
+  const trunc = rows.reduce((a,r)=>a+(mc[r.key].trunc||0),0);
+  $('histHint').textContent = `${mc[rows[0].key].n.toLocaleString()} runs per strategy · per ${F.b(bw$, bw$>=1e9?1:2)} bucket · pools above ${F.b(xmax,0)}` +
+    (trunc ? ` · ${trunc} runs hit the 2M-tap cap` : '');
   const counts = {};
   for (const r of rows){
     const c = new Array(bins).fill(0), t = mc[r.key].totals;
@@ -921,7 +959,7 @@ function renderHist(){
     svgEl('text',{x:padL-6,y:Y(v)+4,'text-anchor':'end'},svg).textContent=(v*100).toFixed(1)+'%'; }
   const tickStep = xmax/8;
   for (let g=0;g<=xmax+1;g+=tickStep){ const i=g/bw$;
-    svgEl('text',{x:X(i),y:H-10,'text-anchor':'middle'},svg).textContent=Math.round(g/1e9)+(g?'b':''); }
+    svgEl('text',{x:X(i),y:H-10,'text-anchor':'middle'},svg).textContent=axisFmt(g); }
   for (const r of rows){
     const col = css(KEYCOL[r.key]);
     let dArea=`M${X(0)},${Y(0)}`, dLine='';
@@ -989,6 +1027,10 @@ function renderBooms(){
 }
 
 function renderDevMatrix(){
+  if (!decisionStars().length){
+    $('devMatrix').innerHTML = '<p style="font-size:13.5px;color:var(--muted);margin:8px 0">No safeguard decisions in this star range: below 15★ nothing can boom, and past 21★ the game offers no protection at all.</p>';
+    $('closestCall').textContent = ''; return;
+  }
   const cols = ['M1','M2','M3','FULL'];
   const head = { M1:'None (Lv1)', M2:'Level 2', M3:'Level 3', FULL:'Full (Lv4 / SG)' };
   let closest = null;
@@ -1024,15 +1066,21 @@ function renderSens(){
      <span class="key"><span class="sw" style="background:${css('--m2')}"></span>Level 2</span>
      <span class="key"><span class="sw" style="background:${css('--m3')}"></span>Level 3</span>
      <span class="key"><span class="sw" style="background:${css('--m4')}"></span>Full (Lv4 / SG)</span>`;
-  const seg = sweepRC(R.P, S.target, S.start);
+  const sweepMax = S.rc <= 16e9 ? 20e9 : niceStep(S.rc*1.3, 1);
+  const seg = sweepRC(R.P, S.target, S.start, sweepMax);
   const stars = decisionStars();
+  if (!stars.length){
+    $('sensPlot').innerHTML = '<p style="font-size:13px;color:var(--muted);margin:12px 0">No safeguard decisions in this star range — protection options exist only for 15★–21★ taps.</p>';
+    $('sensTable').innerHTML = ''; $('flipNote').textContent = ''; return;
+  }
   const W = chartW($('sensPlot')), rowH=34, padL=44, padR=10, padT=6, padB=30;
   const H = padT + rowH*stars.length + padB;
-  const X = v => padL + (v/20e9)*(W-padL-padR);
+  const X = v => padL + (v/sweepMax)*(W-padL-padR);
   const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Optimal mode per star as spare price varies'},$('sensPlot'));
-  for(let g=0;g<=20e9;g+=2.5e9){
+  const gstep = niceStep(sweepMax, 8);
+  for(let g=0;g<=sweepMax;g+=gstep){
     svgEl('line',{x1:X(g),x2:X(g),y1:padT,y2:H-padB+4,stroke:css('--grid'),'stroke-width':1},svg);
-    svgEl('text',{x:X(g),y:H-12,'text-anchor':'middle'},svg).textContent=(g/1e9)+(g?'b':''); }
+    svgEl('text',{x:X(g),y:H-12,'text-anchor':'middle'},svg).textContent=axisFmt(g); }
   stars.forEach((s,i)=>{
     const y = padT + i*rowH;
     svgEl('text',{x:0,y:y+rowH/2+4,class:'lab2','font-size':13},svg).textContent = s+'★';
@@ -1050,19 +1098,20 @@ function renderSens(){
       hover(hit, tip, `<b>${s}★ tap</b> · spare ${F.b(a)}–${F.b(b)}<br>best: <b>${MODE[m].full}</b>`);
     }
   });
-  const mx = Math.min(S.rc, 20e9);
+  const mx = Math.min(S.rc, sweepMax);
   svgEl('line',{x1:X(mx),x2:X(mx),y1:padT-2,y2:H-padB+6,stroke:css('--accent-mark'),'stroke-width':2},svg);
-  svgEl('text',{x:X(mx)+5,y:padT+9,class:'lab1','font-size':11.5},svg).textContent =
-    `your spare ${S.rc>20e9?'(off scale) ':''}≈ ${F.b(S.rc)}`;
+  const mlab = svgEl('text',{x:X(mx)+5,y:padT+9,class:'lab1','font-size':11.5},svg);
+  mlab.textContent = `your spare ≈ ${F.b(S.rc)}`;
+  if (X(mx) > W-140) mlab.setAttribute('x', X(mx)-5), mlab.setAttribute('text-anchor','end');
   const flips = [];
   for (const s of stars) for (const [a,,m] of seg[s]) if (a > 0) flips.push([a, s, m]);
   flips.sort((p,q)=>p[0]-q[0]);
   $('sensTable').innerHTML = '<table><tr><th>Spare price reaches</th><th>Change in optimal policy</th></tr>' +
     (flips.length ? flips.map(f=>`<tr><td>${F.b(f[0],2)}</td><td style="text-align:left">${f[1]}★ → ${MODE[f[2]].full}</td></tr>`).join('')
-      : '<tr><td colspan="2" style="text-align:left">No flips in 0–20b — bare everywhere across the whole range.</td></tr>') + '</table>';
+      : `<tr><td colspan="2" style="text-align:left">No flips up to ${F.b(sweepMax,0)} — bare everywhere across the whole range.</td></tr>`) + '</table>';
   $('flipNote').textContent = flips.length
     ? `With your settings, protection first turns on at ${F.b(flips[0][0],2)} spares (${MODE[flips[0][2]].lab} @ ${flips[0][1]}★).`
-    : 'With your settings, no protection is ever worth it in the 0–20b spare range.';
+    : `With your settings, no protection is ever worth it up to ${F.b(sweepMax,0)} spares.`;
 }
 
 function renderSpend(){
@@ -1076,11 +1125,12 @@ function renderSpend(){
     rows.push([`${S.start}–14★`, sub, 'includes rebuilds from 12★ after 15–19★ booms']);
   }
   for (const s of decisionStars()) rows.push([s+'★', mc.spend[s], MODE[o.pol[s]].full]);
+  for (let s=22; s<S.target; s++) rows.push([s+'★', mc.spend[s], 'no protection exists ≥22★']);
   rows.push(['Spares', o.booms*S.rc, `≈${o.booms.toFixed(1)} booms × ${F.b(S.rc)}`]);
   const W = chartW($('spendPlot')), rowH=34, padL=W<560?64:96, padR=W<560?52:64, padT=4;
   const H = padT + rowH*rows.length + 30;
   const xmax = Math.max(1e9, Math.max(...rows.map(r=>r[1]))*1.25);
-  const step = xmax > 24e9 ? 10e9 : xmax > 12e9 ? 5e9 : xmax > 6e9 ? 2.5e9 : 1e9;
+  const step = niceStep(xmax, 6);
   const X=v=>padL+(v/xmax)*(W-padL-padR);
   const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Expected spend by star range'},$('spendPlot'));
   for(let g=0;g<=xmax;g+=step){
@@ -1090,7 +1140,9 @@ function renderSpend(){
     const y = padT+i*rowH+6, col = r[0]==='Spares' ? css('--accent-mark') : css('--s-noprot');
     svgEl('text',{x:0,y:y+15,class:'lab2','font-size':13},svg).textContent = r[0];
     svgEl('path',{d:rightBarPath(X(0),y,Math.max(2,X(r[1])-X(0)),20,4),fill:col,opacity:r[0]==='Spares'?0.9:0.75},svg);
-    svgEl('text',{x:X(r[1])+6,y:y+15,class:'lab1'},svg).textContent = F.b(r[1]);
+    const vlab = svgEl('text',{x:Math.min(X(r[1])+6, W-2),y:y+15,class:'lab1'},svg);
+    vlab.textContent = F.b(r[1]);
+    if (X(r[1]) > W-70) vlab.setAttribute('text-anchor','end'), vlab.setAttribute('x', X(r[1])-6), vlab.setAttribute('fill', '#ffffff');
     const hit = svgEl('rect',{x:0,y:y-6,width:W,height:rowH,class:'hit',tabindex:0,role:'img',
       'aria-label':`${r[0]}: ${F.b(r[1])} expected. ${r[2]}`},svg);
     hover(hit, tip, `<b>${r[0]}</b> · ${F.b(r[1],2)} expected<br>${r[2]}`);
@@ -1099,7 +1151,7 @@ function renderSpend(){
     rows.map(r=>`<tr><td>${r[0]}</td><td>${F.b(r[1],2)}</td></tr>`).join('')+'</table>';
   const bd = mc.boomDist;
   $('budgetLine').innerHTML = `Practical read: bring <strong>~${F.b(mc.median,0)} liquid and
-    ${Math.max(1,Math.ceil(o.booms))}–${Math.ceil(o.booms)+2} spares</strong> for even odds of finishing;
+    ${fmtN(Math.max(1,Math.ceil(o.booms)),0)}–${fmtN(Math.ceil(o.booms)+2,0)} spares</strong> for even odds of finishing;
     ~${F.b(mc.p90,0)} covers 90% of runs, and ${(bd[0]*100).toFixed(0)}% of runs finish boom-free.`;
 }
 
@@ -1108,13 +1160,16 @@ function renderRates(){
     `MVP ${S.mvp?(S.mvp*100)+'%':'off'}, catch ${S.catch?'on':'off'})`;
   let html = `<table><tr><th>Tap at</th><th>Base cost (no event)</th>
     <th>None: cost · succ · boom</th><th>Lv2</th><th>Lv3</th><th>Full (Lv4/SG)</th></tr>`;
-  for (const s of decisionStars()){
-    const cell = k => { if (!EM[s][k]) return '—';
+  const extra = []; for (let s=22; s<S.target; s++) extra.push(s);
+  for (const s of [...decisionStars(), ...extra]){
+    const cell = k => { if (!EM[s] || !EM[s][k]) return '—';
       const t = tapParams(s, k, R.P);
       return `${F.M(t.cost)} · ${(t.ps*100).toFixed(1)}% · ${(t.pb*100).toFixed(2)}%`; };
-    const full = EM[s].SG ? 'SG' : 'M4';
+    const noneCell = (() => { const t = tapParams(s, 'M1', R.P);
+      return `${F.M(t.cost)} · ${(t.ps*100).toFixed(1)}% · ${(t.pb*100).toFixed(2)}%`; })();
+    const full = EM[s] ? (EM[s].SG ? 'SG' : 'M4') : null;
     html += `<tr><td><b>${s}★</b></td><td>${F.M(baseCost(s, S.level))}</td>
-      <td>${cell('M1')}</td><td>${cell('M2')}</td><td>${cell('M3')}</td><td>${cell(full)}</td></tr>`;
+      <td>${noneCell}</td><td>${cell('M2')}</td><td>${cell('M3')}</td><td>${full?cell(full):'—'}</td></tr>`;
   }
   $('ratesTable').innerHTML = html + '</table>';
   const rcost = s => F.M(tapParams(s, null, R.P).cost);
@@ -1156,8 +1211,8 @@ function buildSimTrack(){
 }
 function simStats(cost, taps, booms, star){
   $('simStats').innerHTML =
-    `<span>cost <b>${F.b(cost,2)}</b></span><span>taps <b>${taps}</b></span>` +
-    `<span>booms <b>${booms}</b></span><span>at <b>${star}★</b></span>`;
+    `<span>cost <b>${F.b(cost,2)}</b></span><span>taps <b>${taps.toLocaleString()}</b></span>` +
+    `<span>booms <b>${booms.toLocaleString()}</b></span><span>at <b>${star}★</b></span>`;
 }
 function resetSim(){
   if (simTimer){ clearTimeout(simTimer); simTimer = null; }
@@ -1198,27 +1253,31 @@ function runSim(){
     return msg;
   }
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const CAP = 3e6;
   $('simBtn').textContent = '↻ Restart run';
   function finish(){
     simTimer = null;
-    $('simLog').innerHTML = `Reached ${S.target}★: <b style="color:${GOOD}">${F.b(cost,2)}</b> total in ` +
-      `${taps} taps and ${booms} boom${booms===1?'':'s'} — expected value was ${F.b(expected,2)}. Roll again?`;
+    $('simLog').innerHTML = star >= S.target
+      ? `Reached ${S.target}★: <b style="color:${GOOD}">${F.b(cost,2)}</b> total in ` +
+        `${taps.toLocaleString()} taps and ${booms} boom${booms===1?'':'s'} — expected value was ${F.b(expected,2)}. Roll again?`
+      : `Stopped at ${star}★ after ${taps.toLocaleString()} taps and ${F.b(cost,2)} — this range outruns patience; ` +
+        `the exact numbers above still hold.`;
     $('simBtn').textContent = '▶ Simulate another run';
   }
   if (reduced){
-    while (star < S.target && taps < 100000) tapOnce();
+    while (star < S.target && taps < CAP) tapOnce();
     els.cursor.setAttribute('cx', els.X(star));
     simStats(cost, taps, booms, star);
     finish(); return;
   }
   function step(){
-    const perTick = taps > 260 ? 6 : taps > 130 ? 3 : 1;
+    const perTick = taps > 20000 ? 2500 : taps > 5000 ? 400 : taps > 1000 ? 40 : taps > 260 ? 6 : taps > 130 ? 3 : 1;
     let msg = '';
-    for (let k=0; k<perTick && star < S.target; k++) msg = tapOnce();
+    for (let k=0; k<perTick && star < S.target && taps < CAP; k++) msg = tapOnce();
     els.cursor.setAttribute('cx', els.X(star));
     simStats(cost, taps, booms, star);
-    $('simLog').textContent = `tap ${taps} · ${msg}`;
-    if (star < S.target) simTimer = setTimeout(step, 34);
+    $('simLog').textContent = `tap ${taps.toLocaleString()} · ${msg}`;
+    if (star < S.target && taps < CAP) simTimer = setTimeout(step, 34);
     else finish();
   }
   step();

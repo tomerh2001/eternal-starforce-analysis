@@ -11,7 +11,7 @@ encoded into the URL, so a shared link carries them:
 
 - **Event**: 30% off + boom −30% (SSF / Special Sunny Sunday, default) · 30% off only · no event
 - **MVP tier** (none / 3% / 5% / 10%), **Star Catch** on/off (guild altar)
-- **Spare cost** (0–30b), **item level** (100–300), **star range** (from/to, up to 22★)
+- **Spare cost** (0–999b), **item level** (100–300), **star range** — any from/to up to **30★** (22★+ has no protection options; the event boom reduction applies ≤21★ only, both per official notes)
 
 Defaults model the way people actually starforce: during the full 30% event.
 
