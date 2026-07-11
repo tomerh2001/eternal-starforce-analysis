@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Cost-optimal safeguard policy for starforcing a Lv 250 Eternal hat 0→22★ under the new GMS Star Force system — exact Markov-chain optimization with interactive charts.">
+<meta property="og:title" content="Eternal Hat 0→22★ — Starforce Strategy (GMS v269)">
+<meta property="og:description" content="Tap bare to 19★, Enhancement Mode Lv 3 at 20–21★. Expected 75.7b all-in. The old safeguard-15-17 habit costs +13.7b. Full math, distributions and spare-price flip points inside.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#161a24">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⭐</text></svg>">
+<script>try{const t=localStorage.getItem('sf-theme');if(t)document.documentElement.dataset.theme=t}catch(e){}</script>
+<title>Eternal Hat 0→22★ · Starforce Strategy (GMS v269)</title>
+<style>
+  :root {
+    --page:#f6f6f2; --surface:#fcfcf9; --ink:#14171d; --ink2:#4d5361; --muted:#858b99;
+    --grid:#e5e4dc; --axis:#c9c8bf; --border:rgba(16,19,24,.10);
+    --accent:#8a6100; --accent-mark:#eda100;
+    --s-opt:#eda100; --s-noprot:#2a78d6; --s-sg:#1baf7a; --s-max:#008300;
+    --m2:#86b6ef; --m3:#2a78d6; --m4:#104281; --m4-ink:#ffffff;
+    --chip-none:transparent; --tip-bg:#14171d; --tip-ink:#f4f4ef;
+    --good:#006300;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --page:#0d1017; --surface:#161a24; --ink:#f2f3f7; --ink2:#b9bdc9; --muted:#848a99;
+    --grid:#262b38; --axis:#3a4152; --border:rgba(255,255,255,.10);
+    --accent:#ffbe3d; --accent-mark:#c98500;
+    --s-opt:#c98500; --s-noprot:#3987e5; --s-sg:#199e70; --s-max:#008300;
+    --m2:#184f95; --m3:#3987e5; --m4:#9ec5f4; --m4-ink:#0d1017;
+    --tip-bg:#f2f3f7; --tip-ink:#14171d;
+    --good:#0ca30c;
+  } }
+  :root[data-theme="light"] {
+    --page:#f6f6f2; --surface:#fcfcf9; --ink:#14171d; --ink2:#4d5361; --muted:#858b99;
+    --grid:#e5e4dc; --axis:#c9c8bf; --border:rgba(16,19,24,.10);
+    --accent:#8a6100; --accent-mark:#eda100;
+    --s-opt:#eda100; --s-noprot:#2a78d6; --s-sg:#1baf7a; --s-max:#008300;
+    --m2:#86b6ef; --m3:#2a78d6; --m4:#104281; --m4-ink:#ffffff;
+    --tip-bg:#14171d; --tip-ink:#f4f4ef;
+    --good:#006300;
+  }
+  :root[data-theme="dark"] {
+    --page:#0d1017; --surface:#161a24; --ink:#f2f3f7; --ink2:#b9bdc9; --muted:#848a99;
+    --grid:#262b38; --axis:#3a4152; --border:rgba(255,255,255,.10);
+    --accent:#ffbe3d; --accent-mark:#c98500;
+    --s-opt:#c98500; --s-noprot:#3987e5; --s-sg:#199e70; --s-max:#008300;
+    --m2:#184f95; --m3:#3987e5; --m4:#9ec5f4; --m4-ink:#0d1017;
+    --tip-bg:#f2f3f7; --tip-ink:#14171d;
+    --good:#0ca30c;
+  }
+
+  * { box-sizing:border-box; }
+  body { background:var(--page); color:var(--ink);
+    font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif; margin:0; }
+  .wrap { max-width:960px; margin:0 auto; padding:40px 22px 72px; }
+
+  h1,h2 { font-family:"Avenir Next Condensed","Avenir Next","Helvetica Neue","Arial Narrow",system-ui,sans-serif;
+    text-wrap:balance; letter-spacing:.01em; }
+  h1 { font-size:42px; line-height:1.08; font-weight:700; margin:10px 0 8px; }
+  h2 { font-size:26px; font-weight:600; margin:0 0 6px; }
+  .eyebrow { font-size:12px; font-weight:600; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--accent); margin:0 0 4px; }
+  .sub { color:var(--ink2); max-width:64ch; margin:0; }
+  section { margin-top:52px; }
+  section > p { color:var(--ink2); max-width:66ch; }
+  strong { color:var(--ink); }
+
+  .chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .chip { font-size:13px; color:var(--ink2); background:var(--surface);
+    border:1px solid var(--border); border-radius:999px; padding:5px 12px; }
+  .chip b { color:var(--ink); font-weight:600; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:22px 24px; position:relative; }
+  .card + .card { margin-top:16px; }
+
+  /* ---- answer / policy strip ---- */
+  .policy { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 6px; }
+  .pstar { flex:1 1 96px; min-width:96px; border:1px solid var(--border); border-radius:10px;
+    padding:10px 12px; background:var(--page); }
+  .pstar .st { font-size:13px; color:var(--muted); font-weight:600; }
+  .pstar .md { font-size:17px; font-weight:700; margin-top:2px; }
+  .pstar .why { font-size:12px; color:var(--muted); margin-top:2px; }
+  .pstar.lvl0 .md { color:var(--ink2); }
+  .pstar.lvl3 { background:color-mix(in srgb, var(--m3) 14%, var(--page)); border-color:var(--m3); }
+  .pstar.lvl3 .md { color:var(--ink); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-top:18px; }
+  .tile { background:var(--page); border:1px solid var(--border); border-radius:10px; padding:12px 14px; }
+  .tile .lab { font-size:12.5px; color:var(--muted); }
+  .tile .val { font-size:26px; font-weight:650; margin-top:2px; }
+  .tile .note { font-size:12px; color:var(--muted); margin-top:2px; }
+
+  /* ---- charts ---- */
+  .charthead { display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 16px; margin-bottom:4px; }
+  .charthead h3 { font-size:17px; font-weight:650; margin:0; }
+  .charthead .hint { font-size:12.5px; color:var(--muted); }
+  .legend { display:flex; flex-wrap:wrap; gap:6px 16px; font-size:13px; color:var(--ink2); margin:8px 0 4px; }
+  .legend .key { display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .sw.line { height:3px; border-radius:2px; width:16px; }
+  svg { display:block; width:100%; height:auto; }
+  svg text { font:12px system-ui,-apple-system,"Segoe UI",sans-serif; fill:var(--muted);
+    font-variant-numeric:tabular-nums; }
+  svg .lab2 { fill:var(--ink2); }
+  svg .lab1 { fill:var(--ink); font-weight:600; }
+  .tip { position:absolute; pointer-events:none; background:var(--tip-bg); color:var(--tip-ink);
+    font-size:12.5px; line-height:1.45; border-radius:8px; padding:8px 11px; max-width:280px;
+    opacity:0; transform:translateY(2px); transition:opacity .12s; z-index:5; }
+  @media (prefers-reduced-motion: reduce) { .tip { transition:none; } }
+  .tip b { font-weight:650; }
+  .hit { fill:transparent; cursor:default; }
+  .hit:focus { outline:none; }
+  .hit:focus-visible { stroke:var(--accent); stroke-width:2; fill:rgba(128,128,128,.06); }
+  details { margin-top:12px; }
+  summary { font-size:13px; color:var(--muted); cursor:pointer; }
+  table { border-collapse:collapse; font-size:13.5px; margin-top:10px; width:100%; }
+  th,td { text-align:right; padding:6px 10px; border-bottom:1px solid var(--grid);
+    font-variant-numeric:tabular-nums; white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; font-size:12.5px; }
+  th:first-child, td:first-child { text-align:left; }
+  .tblwrap { overflow-x:auto; }
+  td.best { font-weight:700; }
+  td.best::after { content:" ◂ best"; font-size:11px; color:var(--accent); font-weight:600; }
+
+  .callout { border-left:3px solid var(--accent-mark); padding:4px 0 4px 16px; margin:14px 0; color:var(--ink2); }
+  .callout b { color:var(--ink); }
+  ul { color:var(--ink2); padding-left:20px; } li { margin:4px 0; } li::marker { color:var(--muted); }
+  a { color:var(--accent); text-decoration-thickness:1px; text-underline-offset:2px; }
+  .src { font-size:13.5px; }
+  footer { margin-top:56px; font-size:12.5px; color:var(--muted); border-top:1px solid var(--grid); padding-top:14px; }
+  .num { font-variant-numeric:tabular-nums; }
+
+  .themebtn { position:fixed; top:14px; right:14px; z-index:10; width:38px; height:38px;
+    border-radius:999px; background:var(--surface); border:1px solid var(--border);
+    color:var(--ink2); font-size:17px; cursor:pointer; line-height:1; }
+  .themebtn:hover { color:var(--ink); }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Starforce lab · GMS v269 enhancement mode</p>
+  <h1>Eternal hat, 0 → 22★: tap bare until 20★, then Level 3</h1>
+  <p class="sub">Exact expected-cost optimization of every safeguard decision under the new
+  (post-revamp) Star Force system — all 16,384 per-star policies solved analytically,
+  plus 300,000-trial simulation for the spread.</p>
+  <div class="chips">
+    <span class="chip">Lv 250 <b>Eternal hat</b></span>
+    <span class="chip"><b>MVP Black</b> · −10% meso ≤16★</span>
+    <span class="chip"><b>Guild altar</b> · auto Star Catch ×1.05</span>
+    <span class="chip">Spare hat <b>2.0b</b></span>
+    <span class="chip">No event (SSF scenario below)</span>
+  </div>
+</header>
+
+<section id="answer">
+  <p class="eyebrow">The answer</p>
+  <h2>Protection is only worth buying at 20★ and 21★ — and only Level 3</h2>
+  <div class="card">
+    <div class="policy" id="policyStrip"></div>
+    <p style="font-size:13px;color:var(--muted);margin:6px 0 0">
+      0–14★: no boom risk exists — just tap. “None” = Enhancement Mode Level 1.
+      Never use classic Safeguard or Level 4 anywhere at a 2b spare price.</p>
+    <div class="tiles">
+      <div class="tile"><div class="lab">Expected total</div><div class="val">75.7b</div><div class="note">≈ 38 clean hats</div></div>
+      <div class="tile"><div class="lab">Median run</div><div class="val">59.2b</div><div class="note">p10 23.5b · p90 149.7b</div></div>
+      <div class="tile"><div class="lab">Expected booms</div><div class="val">5.0</div><div class="note">≈ 9.9b in spare hats</div></div>
+      <div class="tile"><div class="lab">Expected taps</div><div class="val">160</div><div class="note">enhancement meso 65.8b</div></div>
+    </div>
+  </div>
+  <p>The logic: a boom is only as scary as what it costs you.
+  Boom at <strong>15–19★</strong> → trace restores at <strong>12★</strong>, and rebuilding 12→15 is pocket change,
+  so you eat the 2b and keep tapping. Boom at <strong>21★</strong> → restore at <strong>17★</strong>, and re-climbing
+  17→21 through the expensive 18–19★ taps runs ~17b — that risk is worth paying down.
+  Level 4 is never worth it: 6.5× cost <em>and</em> success cut to 8% is insurance priced like a scam.</p>
+</section>
+
+<section id="compare">
+  <p class="eyebrow">Strategy comparison</p>
+  <h2>The old “safeguard 15–17” habit now costs you 13.7b</h2>
+  <p>Under the revamp, fails keep your stars and a 15–17★ boom only sets you back ~4–5b all-in.
+  Paying +200% per tap to insure against that is the worst habit to carry over.
+  Full protection everywhere costs 2.6× the optimal strategy.</p>
+  <div class="card" id="rangeCard">
+    <div class="charthead"><h3>Total cost to 22★ — expected value and run spread</h3>
+      <span class="hint">bar = middle 80% of runs (p10–p90) · tick = median · dot = expected value</span></div>
+    <div id="rangePlot"></div>
+    <details><summary>Data table</summary><div class="tblwrap" id="rangeTable"></div></details>
+  </div>
+</section>
+
+<section id="dist">
+  <p class="eyebrow">Distributions</p>
+  <h2>What protection actually buys: a shorter tail, not a cheaper run</h2>
+  <p>In the median run, tapping bare is slightly cheaper. The optimal policy wins on
+  average because Level 3 at 20/21★ chops the disaster tail — the p90 drops by 17b,
+  the p99 by 45b, and half your runs finish under 60b either way.</p>
+  <div class="card" id="histCard">
+    <div class="charthead"><h3>Distribution of total cost (300k simulated runs)</h3>
+      <span class="hint">share of runs per 2.5b bucket · last bucket pools runs above 200b</span></div>
+    <div class="legend" id="histLegend"></div>
+    <div id="histPlot"></div>
+    <details><summary>Percentile table</summary><div class="tblwrap" id="histTable"></div></details>
+  </div>
+  <div class="card" id="boomCard" style="margin-top:16px">
+    <div class="charthead"><h3>How many hats you burn</h3>
+      <span class="hint">probability of finishing with exactly k booms</span></div>
+    <div class="legend" id="boomLegend"></div>
+    <div id="boomPlot"></div>
+    <details><summary>Data table</summary><div class="tblwrap" id="boomTable"></div></details>
+  </div>
+</section>
+
+<section id="perstar">
+  <p class="eyebrow">Why each star gets its setting</p>
+  <h2>The price of every choice, star by star</h2>
+  <p>Each cell: how much the <em>expected total</em> rises if you change only that star’s setting
+  and play everything else optimally. At 17★, Level 2 is a genuine coin flip (+0.08b).
+  At 18–19★ the mode success-rate cut (15% → 12/10/8%) is brutal — never mode up there.</p>
+  <div class="card">
+    <div class="tblwrap" id="devMatrix"></div>
+    <p style="font-size:12.5px;color:var(--muted);margin:10px 0 0">
+      Hover a cell for that option’s per-tap cost and rates. “Full” = Level 4 at 18–21★, classic Safeguard at 15–17★.</p>
+  </div>
+</section>
+
+<section id="sens">
+  <p class="eyebrow">Generalize it</p>
+  <h2>If your spare costs more than 2b, protect earlier</h2>
+  <p>The same solve, sweeping the replacement cost from 0 to 20b. Read your item’s spare price
+  down from the top: a 2b hat protects only 20–21★; a ~6.5b eternal piece wants Level 2 at 17★
+  and Level 4 at 20–21★; only at ~14b+ does the old “safeguard 15–17” instinct become correct.</p>
+  <div class="card" id="sensCard">
+    <div class="charthead"><h3>Cost-optimal setting per star, by spare price</h3>
+      <span class="hint">gold line = this analysis (2.0b)</span></div>
+    <div class="legend" id="sensLegend"></div>
+    <div id="sensPlot"></div>
+    <details><summary>Flip thresholds</summary><div class="tblwrap" id="sensTable"></div></details>
+  </div>
+</section>
+
+<section id="ssf">
+  <p class="eyebrow">The biggest lever isn’t a mode at all</p>
+  <h2>Shining Star Force: −49% — and drop all protection while it’s up</h2>
+  <div class="card">
+    <div class="tiles" style="margin-top:0">
+      <div class="tile"><div class="lab">Expected total during SSF</div><div class="val">38.5b</div><div class="note">vs 75.7b off-event</div></div>
+      <div class="tile"><div class="lab">Median run</div><div class="val">28.6b</div><div class="note">p90 81.2b</div></div>
+      <div class="tile"><div class="lab">Optimal policy</div><div class="val">Bare</div><div class="note">Level 1 at every star, even 20–21★</div></div>
+      <div class="tile"><div class="lab">Expected booms</div><div class="val">3.8</div><div class="note">30% boom reduction ≤21★</div></div>
+    </div>
+    <p style="color:var(--ink2);max-width:66ch">30% off every tap <em>and</em> 30% off every boom chance
+    moves the math decisively toward raw tapping: cheap taps make re-climbs cheap, which makes booms
+    cheap, which makes insurance pointless. If you can wait for an SSF / Special Sunny Sunday,
+    the whole climb costs about half — v.269 ran them on Jun 21, Jul 5 and Jul 19.</p>
+  </div>
+</section>
+
+<section id="spend">
+  <p class="eyebrow">Budgeting</p>
+  <h2>Where the 75.7b goes</h2>
+  <div class="card" id="spendCard">
+    <div class="charthead"><h3>Expected meso by star range (optimal policy)</h3>
+      <span class="hint">includes re-climbs after booms · spares counted separately</span></div>
+    <div id="spendPlot"></div>
+    <details><summary>Data table</summary><div class="tblwrap" id="spendTable"></div></details>
+  </div>
+  <p>Practical read: have <strong>~60b liquid and 5–6 spare hats</strong> before you start if you want
+  even odds of finishing; ~150b covers 90% of runs. 21★ is the single most expensive station
+  (17.5b expected) — that’s where Level 3 earns its keep.</p>
+</section>
+
+<section id="method">
+  <p class="eyebrow">Method &amp; data</p>
+  <h2>Model, numbers, receipts</h2>
+  <ul>
+    <li><strong>Model.</strong> Star count is a Markov chain: tap → success (+1★), maintain (stay), or destroy
+      (pay 2b, restore from trace: 15–19★→12★, 20★→15★, 21★→17★). Expected cost per policy solved exactly
+      (linear system); all 4⁷ = 16,384 per-star policies enumerated; optimum cross-checked with value iteration
+      and a 300k-trial Monte Carlo.</li>
+    <li><strong>Rates.</strong> Official GMS v.264 revamp table (fails never drop stars; no boom below 15★).
+      Enhancement Mode Level 2–4 rates and cost multipliers are community-measured in-game (v.269 calculator),
+      including the success-rate cuts at 18–21★ and multipliers ×1.5/×2.5/×3 (15–17★), ×2/×3.5/×6.5 (18–21★).</li>
+    <li><strong>Costs.</strong> Meso formula verified in-game at Lv 250 (18→19★ base 632.9M; ×6.5 = 4.114b matches).
+      MVP Black −10% on the base portion for taps ≤16★; Safeguard surcharge is never discounted;
+      guild altar star catch = ×1.05 success, applied to every tap.</li>
+  </ul>
+  <div class="card">
+    <div class="charthead"><h3>Per-tap cost and rates as modeled (Lv 250, MVP Black + altar catch)</h3></div>
+    <div class="tblwrap" id="ratesTable"></div>
+    <p style="font-size:12.5px;color:var(--muted)">Re-climb context: 12★ 106M · 13★ 177M · 14★ 312M per tap, no boom, catch applied.</p>
+  </div>
+  <p class="src" style="margin-top:14px"><strong>Sources.</strong>
+    <a href="https://www.nexon.com/maplestory/news/update/32522/updated-11-14-v-264-every-little-thing-every-precious-thing-patch-notes">GMS v.264 patch notes</a> (revamp rates, trace restore table) ·
+    <a href="https://www.nexon.com/maplestory/news/update/41138/v-269-ride-the-lightning-patch-notes">GMS v.269 patch notes</a> (Enhancement Mode) ·
+    <a href="https://maplestorywiki.net/w/Star_Force_Enhancement">MapleStory Wiki: Star Force</a> (discounts, altar, trace) ·
+    <a href="https://starforce.tadeucci.dev/">v269 community calculator</a> (measured mode rates &amp; costs) ·
+    <a href="https://orangemushroom.net/2025/03/20/kms-ver-1-2-401-maplestory-next-destiny-weapon-star-force-reorganization/">Orange Mushroom KMS 1.2.401</a> (upstream renewal).</p>
+  <p class="src"><strong>Caveats.</strong> Mode 2–4 rates aren’t in official notes (in-game measured; Mode 1 and costs are official/verified).
+    One tool applies MVP only ≤15★ instead of ≤16★ (±0.05b — irrelevant). The weekly free Trace Restoration
+    (Eternal armor = 2,312 pts vs ~126 pts/week cap) is excluded — bank it to save one spare every few months.
+    5/10/15 Sunny Sundays would make the 15→16 tap free of risk but are rarer; not modeled.</p>
+</section>
+
+<footer>
+  Exact DP + Monte Carlo · data compiled 10 Jul 2026 · GMS v269 · not affiliated with Nexon.
+  Alternate near-optimal policies: Level 2 at 17★ (+0.08b), Level 2 at 20★ (+0.33b) — everything else costs real money.
+</footer>
+</div>
+
+<script>
+const DATA = {"strategies": [{"key": "optimal", "name": "Optimal (this analysis)", "policy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M3", "21": "M3"}, "E": 75727896237.76094, "median": 59192820815.0, "p10": 23479996688.0, "p25": 35700412225.0, "p75": 98247063420.0, "p90": 149686277080.00003, "p99": 278250196545.6001, "booms": 4.960214017550919, "taps": 159.6522164673254, "meso": 65807468202.65915, "spares": 9920428035.101837, "hist": [0, 0, 46, 658, 2013, 3819, 5458, 6880, 7872, 8608, 9176, 9359, 9299, 9212, 9067, 8822, 8664, 8454, 8140, 7941, 7629, 7268, 7005, 6673, 6352, 6142, 5778, 5615, 5434, 5077, 4812, 4731, 4595, 4388, 4026, 4050, 3815, 3687, 3418, 3342, 3159, 3042, 2995, 2825, 2606, 2575, 2332, 2298, 2211, 2091, 1995, 1912, 1886, 1720, 1716, 1608, 1570, 1532, 1398, 1384, 1283, 1366, 1191, 1166, 1126, 960, 1016, 979, 903, 883, 826, 756, 789, 753, 673, 648, 654, 595, 596, 12657], "boomDist": [49974, 42038, 34890, 29024, 24101, 20205, 17007, 14088, 11539, 9695, 7830, 6677, 5545, 4722, 3934, 3159]}, {"key": "no_protection", "name": "No protection anywhere", "policy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M1", "21": "M1"}, "E": 77165017501.97891, "median": 56159823290.0, "p10": 15567173683.0, "p25": 28227093342.5, "p75": 103844953032.5, "p90": 166784942931.00003, "p99": 323646408386.2001, "booms": 7.380757762983704, "taps": 202.37768847362847, "meso": 62403501976.01156, "spares": 14761515525.967407, "hist": [0, 74, 2253, 6767, 9026, 9719, 9741, 9184, 9244, 8453, 8165, 8077, 7682, 7542, 7305, 6861, 6706, 6647, 6378, 5973, 5998, 5631, 5425, 5194, 5008, 4884, 4743, 4585, 4388, 4208, 3987, 3950, 3728, 3696, 3496, 3395, 3343, 3189, 2985, 3005, 2886, 2754, 2660, 2585, 2556, 2400, 2230, 2077, 2062, 2016, 1992, 1989, 1881, 1749, 1728, 1652, 1585, 1495, 1419, 1393, 1364, 1350, 1262, 1205, 1209, 1122, 1054, 1097, 1040, 1039, 937, 902, 835, 882, 823, 829, 725, 695, 720, 19166], "boomDist": [35538, 31311, 27599, 24476, 21701, 18902, 16880, 14869, 12967, 11679, 10115, 8839, 7801, 6861, 6150, 5386]}, {"key": "classic_sg_15_17", "name": "Safeguard 15\u201317 (old habit)", "policy": {"15": "SG", "16": "SG", "17": "SG", "18": "M1", "19": "M1", "20": "M1", "21": "M1"}, "E": 89417493095.74162, "median": 65266781505.0, "p10": 18612131885.0, "p25": 33015614140.0, "p75": 120400919530.0, "p90": 192840880225.00012, "p99": 373249815708.4002, "booms": 4.2389869399810305, "taps": 160.75657917096902, "meso": 80939519215.77957, "spares": 8477973879.962061, "hist": [0, 1, 235, 2047, 5698, 8603, 9398, 8977, 8433, 7945, 7518, 7466, 7179, 7032, 6893, 6482, 6432, 6290, 5843, 5743, 5649, 5414, 5262, 5073, 5008, 4846, 4614, 4379, 4392, 4348, 4040, 4035, 3811, 3757, 3566, 3540, 3359, 3350, 3239, 3066, 3043, 2912, 2809, 2696, 2655, 2537, 2547, 2449, 2351, 2264, 2278, 2141, 2070, 1952, 1886, 1874, 1777, 1817, 1677, 1663, 1629, 1497, 1450, 1520, 1431, 1415, 1348, 1272, 1235, 1218, 1147, 1189, 1116, 1044, 1103, 948, 944, 1015, 903, 28215], "boomDist": [57306, 46077, 37088, 30314, 24804, 19792, 16233, 13120, 10516, 8727, 6776, 5744, 4503, 3529, 2996, 2412]}, {"key": "max_protection", "name": "Max protection", "policy": {"15": "SG", "16": "SG", "17": "SG", "18": "M4", "19": "M4", "20": "M4", "21": "M4"}, "E": 198608638416.59152, "median": 177638663315.0, "p10": 87773640404.0, "p25": 123294072047.5, "p75": 251259088672.5, "p90": 337246559843.0, "p99": 537416801190.3001, "booms": 0.0, "taps": 79.96628291851653, "meso": 198608638416.59152, "spares": 0.0, "hist": [0, 0, 0, 0, 0, 0, 0, 1, 2, 25, 46, 85, 103, 194, 227, 328, 454, 511, 608, 769, 865, 997, 1141, 1214, 1404, 1494, 1640, 1784, 1831, 1981, 2158, 2285, 2430, 2512, 2644, 2663, 2752, 2813, 2991, 3001, 3057, 3279, 3236, 3330, 3270, 3296, 3394, 3530, 3560, 3415, 3420, 3458, 3532, 3544, 3615, 3641, 3543, 3569, 3707, 3501, 3489, 3489, 3483, 3372, 3343, 3380, 3384, 3263, 3263, 3264, 3261, 3142, 3078, 3085, 3050, 2918, 3010, 2923, 2791, 126162], "boomDist": [300000, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}], "optimalPolicy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M3", "21": "M3"}, "options": {"15": {"M1": {"cost": 125360190, "succ": 0.315, "maint": 0.6644500000000001, "boom": 0.020550000000000006}, "M2": {"cost": 195004740, "succ": 0.315, "maint": 0.6713, "boom": 0.013700000000000002}, "M3": {"cost": 334293840, "succ": 0.315, "maint": 0.67815, "boom": 0.006850000000000001}, "SG": {"cost": 403938390, "succ": 0.315, "maint": 0.685, "boom": 0.0}}, "16": {"M1": {"cost": 147654720, "succ": 0.315, "maint": 0.6644500000000001, "boom": 0.020550000000000006}, "M2": {"cost": 229685120, "succ": 0.315, "maint": 0.6713, "boom": 0.013700000000000002}, "M3": {"cost": 393745920, "succ": 0.315, "maint": 0.67815, "boom": 0.006850000000000001}, "SG": {"cost": 475776320, "succ": 0.315, "maint": 0.685, "boom": 0.0}}, "17": {"M1": {"cost": 255250300, "succ": 0.1575, "maint": 0.7751, "boom": 0.0674}, "M2": {"cost": 382875450, "succ": 0.1575, "maint": 0.800375, "boom": 0.04212500000000001}, "M3": {"cost": 638125750, "succ": 0.1575, "maint": 0.82565, "boom": 0.016850000000000004}, "SG": {"cost": 765750900, "succ": 0.1575, "maint": 0.8425, "boom": 0.0}}, "18": {"M1": {"cost": 632932500, "succ": 0.1575, "maint": 0.7751, "boom": 0.0674}, "M2": {"cost": 1265865000, "succ": 0.126, "maint": 0.8302999999999999, "boom": 0.043699999999999996}, "M3": {"cost": 2215263750, "succ": 0.10500000000000001, "maint": 0.8771, "boom": 0.0179}, "M4": {"cost": 4114061250, "succ": 0.084, "maint": 0.916, "boom": 0.0}}, "19": {"M1": {"cost": 1130808000, "succ": 0.1575, "maint": 0.7582500000000001, "boom": 0.08425000000000002}, "M2": {"cost": 2261616000, "succ": 0.126, "maint": 0.81282, "boom": 0.06118}, "M3": {"cost": 3957828000, "succ": 0.10500000000000001, "maint": 0.8592, "boom": 0.0358}, "M4": {"cost": 7350252000, "succ": 0.084, "maint": 0.916, "boom": 0.0}}, "20": {"M1": {"cost": 290257600, "succ": 0.315, "maint": 0.58225, "boom": 0.10275000000000001}, "M2": {"cost": 580515200, "succ": 0.2625, "maint": 0.6637500000000001, "boom": 0.07375}, "M3": {"cost": 1015901600, "succ": 0.21000000000000002, "maint": 0.7505000000000001, "boom": 0.0395}, "M4": {"cost": 1886674400, "succ": 0.1575, "maint": 0.8425, "boom": 0.0}}, "21": {"M1": {"cost": 526565100, "succ": 0.1575, "maint": 0.7161250000000001, "boom": 0.12637500000000002}, "M2": {"cost": 1053130200, "succ": 0.126, "maint": 0.7866000000000001, "boom": 0.08739999999999999}, "M3": {"cost": 1842977850, "succ": 0.10500000000000001, "maint": 0.8502500000000001, "boom": 0.04475}, "M4": {"cost": 3422673150, "succ": 0.084, "maint": 0.916, "boom": 0.0}}}, "deviations": {"15": {"M1": 75727896237.76094, "M2": 76475313308.75948, "M3": 78371335890.79218, "SG": 79118752961.79088}, "16": {"M1": 75727896237.76094, "M2": 76554525466.65, "M3": 78651178610.77892, "SG": 79477807839.66812}, "17": {"M1": 75727896237.76094, "M2": 75803665978.13403, "M3": 78888831560.3427, "SG": 79942476667.86998}, "18": {"M1": 75727896237.76094, "M2": 89580954819.81177, "M3": 114356321640.60696, "M4": 183030765366.4929}, "19": {"M1": 75727896237.76094, "M2": 92607198348.35594, "M3": 122051989724.06822, "M4": 196994477446.40088}, "20": {"M1": 76199751208.52705, "M2": 76055374152.21112, "M3": 75727896237.76094, "M4": 77662550732.51479}, "21": {"M1": 76568699951.2779, "M2": 77233796923.97345, "M3": 75727896237.76094, "M4": 81871854916.44997}}, "baseCosts": {"0": 626000.0, "1": 1251000.0, "2": 1876000.0, "3": 2501000.0, "4": 3126000.0, "5": 3751000.0, "6": 4376000.0, "7": 5001000.0, "8": 5626000.0, "9": 6251000.0, "10": 25324300.0, "11": 58236400.0, "12": 106018100.0, "13": 176593800.0, "14": 312037300.0, "15": 139289100.0, "16": 164060800.0, "17": 255250300.0, "18": 632932500.0, "19": 1130808000.0, "20": 290257600.0, "21": 526565100.0}, "sensitivity": {"15": [[0.0, 8750000000.0, "M1"], [8750000000.0, 13750000000.0, "M2"], [13750000000.0, 20000000000.0, "SG"]], "16": [[0.0, 9500000000.0, "M1"], [9500000000.0, 15250000000.0, "M2"], [15250000000.0, 20000000000.0, "SG"]], "17": [[0.0, 2250000000.0, "M1"], [2250000000.0, 5750000000.0, "M2"], [5750000000.0, 20000000000.0, "SG"]], "18": [[0.0, 20000000000.0, "M1"]], "19": [[0.0, 20000000000.0, "M1"]], "20": [[0.0, 1500000000.0, "M1"], [1500000000.0, 4500000000.0, "M3"], [4500000000.0, 20000000000.0, "M4"]], "21": [[0.0, 1500000000.0, "M1"], [1500000000.0, 6500000000.0, "M3"], [6500000000.0, 20000000000.0, "M4"]]}, "ssf": {"policy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M1", "21": "M1"}, "E": 38497332435.04549, "median": 28643575633.0, "p90": 81234164312.80003, "booms": 3.8161735264419536, "taps": 136.43883156641334}, "sub15E": 1749069178.4958222, "spend": {"sub15": 8358377915.802, "15": 2065305787.3116, "16": 2284358298.2016, "17": 6011746955.708, "18": 10445926419.1, "19": 12160271986.24, "20": 6887037376.4453335, "21": 17539036588.7975}, "top3": [{"E": 75727896237.76094, "policy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M3", "21": "M3"}}, {"E": 75803665978.13403, "policy": {"15": "M1", "16": "M1", "17": "M2", "18": "M1", "19": "M1", "20": "M3", "21": "M3"}}, {"E": 76055374152.21112, "policy": {"15": "M1", "16": "M1", "17": "M1", "18": "M1", "19": "M1", "20": "M2", "21": "M3"}}], "histMax": 200000000000.0, "histBins": 80};
+
+const css = k => getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+const F = { b:(v,d=1)=>(v/1e9).toFixed(d)+'b', M:v=>Math.round(v/1e6)+'M',
+  pct:(v,d=1)=>(v*100).toFixed(d)+'%' };
+const SKEY = ['optimal','no_protection','classic_sg_15_17','max_protection'];
+const SCOL = { optimal:'--s-opt', no_protection:'--s-noprot', classic_sg_15_17:'--s-sg', max_protection:'--s-max' };
+const SNAME = { optimal:'Optimal', no_protection:'No protection', classic_sg_15_17:'Safeguard 15–17', max_protection:'Max protection' };
+const MODE = { M1:{lab:'None', full:'Level 1 (no protection)'}, M2:{lab:'Lv 2', full:'Level 2'},
+  M3:{lab:'Lv 3', full:'Level 3'}, M4:{lab:'Lv 4', full:'Level 4 (0% boom)'}, SG:{lab:'SG', full:'Classic Safeguard (0% boom)'} };
+const MCOL = m => m==='M2' ? css('--m2') : m==='M3' ? css('--m3') : (m==='M4'||m==='SG') ? css('--m4') : 'none';
+const STARS = ['15','16','17','18','19','20','21'];
+
+/* ---------- tooltip helper ---------- */
+function tipFor(card){
+  const tip = document.createElement('div'); tip.className='tip'; card.appendChild(tip);
+  return {
+    show(html, x, y){ tip.innerHTML = html; tip.style.opacity = 1;
+      const r = card.getBoundingClientRect();
+      let px = x - r.left + 14, py = y - r.top + 14;
+      tip.style.left = Math.min(px, card.clientWidth - 290) + 'px';
+      tip.style.top = py + 'px'; },
+    hide(){ tip.style.opacity = 0; }
+  };
+}
+function svgEl(tag, attrs, parent){ const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+function barPath(x, y, w, h, r, up=true){ r = Math.min(r, w/2, h);
+  return up ? `M${x},${y+h} L${x},${y+r} Q${x},${y} ${x+r},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h} Z`
+            : `M${x},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x},${y+h} Z`; }
+function rightBarPath(x,y,w,h,r){ r=Math.min(r,h/2,w);
+  return `M${x},${y} L${x+w-r},${y} Q${x+w},${y} ${x+w},${y+r} L${x+w},${y+h-r} Q${x+w},${y+h} ${x+w-r},${y+h} L${x},${y+h} Z`; }
+
+/* ---------- policy strip ---------- */
+(function(){
+  const wrap = document.getElementById('policyStrip');
+  const why = {15:'boom → 12★, cheap',16:'boom → 12★, cheap',17:'boom → 12★ · Lv2 ≈ tie',
+    18:'mode kills success',19:'mode kills success',20:'boom → 15★ · insure',21:'boom → 17★ · insure'};
+  const pre = document.createElement('div'); pre.className='pstar lvl0';
+  pre.innerHTML = `<div class="st">0–14★</div><div class="md">Just tap</div><div class="why">no boom risk</div>`;
+  wrap.appendChild(pre);
+  for (const s of STARS){
+    const m = DATA.optimalPolicy[s];
+    const d = document.createElement('div');
+    d.className = 'pstar ' + (m==='M1' ? 'lvl0' : 'lvl3');
+    d.innerHTML = `<div class="st">${s}★ → ${+s+1}★</div><div class="md">${m==='M1'?'None':MODE[m].full.replace(' (no protection)','')}</div>
+      <div class="why">${why[s]}</div>`;
+    wrap.appendChild(d);
+  }
+})();
+
+/* ---------- range plot ---------- */
+(function(){
+  const card = document.getElementById('rangeCard'), tip = tipFor(card);
+  const W=920, rowH=52, padL=196, padR=70, padT=8;
+  const H = padT + rowH*4 + 34;
+  const xmax = 350e9, X = v => padL + (v/xmax)*(W-padL-padR);
+  const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`, role:'img',
+    'aria-label':'Expected cost and run spread for four strategies'}, document.getElementById('rangePlot'));
+  for (let g=0; g<=350e9; g+=50e9){
+    svgEl('line',{x1:X(g),x2:X(g),y1:padT,y2:H-30,stroke:css('--grid'),'stroke-width':1},svg);
+    svgEl('text',{x:X(g),y:H-14,'text-anchor':'middle'},svg).textContent = g/1e9 + (g? 'b':'');
+  }
+  DATA.strategies.forEach((s,i)=>{
+    const y = padT + i*rowH + rowH/2, col = css(SCOL[s.key]);
+    const name = svgEl('text',{x:0,y:y-6,class:'lab2','text-anchor':'start','font-size':13},svg);
+    name.textContent = SNAME[s.key];
+    const sub = svgEl('text',{x:0,y:y+11,'font-size':11.5},svg);
+    sub.textContent = s.key==='optimal' ? 'Lv3 @ 20–21★ only' :
+      s.key==='no_protection' ? 'Level 1 everywhere' :
+      s.key==='classic_sg_15_17' ? 'SG 15–17, bare above' : 'SG 15–17 + Lv4 18–21';
+    svgEl('path',{d:rightBarPath(X(s.p10),y-8,X(s.p90)-X(s.p10),16,4),fill:col,opacity:.22},svg);
+    svgEl('line',{x1:X(s.median),x2:X(s.median),y1:y-11,y2:y+11,stroke:col,'stroke-width':2.5},svg);
+    const dot = svgEl('circle',{cx:X(s.E),cy:y,r:5.5,fill:col,stroke:css('--surface'),'stroke-width':2},svg);
+    svgEl('text',{x:X(s.E),y:y-13,class:'lab1','text-anchor':'middle'},svg).textContent = F.b(s.E);
+    const hit = svgEl('rect',{x:padL-4,y:y-rowH/2,width:W-padL-padR+40,height:rowH,class:'hit',tabindex:0,
+      role:'img','aria-label':`${SNAME[s.key]}: expected ${F.b(s.E)}, median ${F.b(s.median)}, p10 ${F.b(s.p10)}, p90 ${F.b(s.p90)}`},svg);
+    const html = `<b>${SNAME[s.key]}</b><br>expected <b>${F.b(s.E,2)}</b> · median ${F.b(s.median)}<br>
+      p10 ${F.b(s.p10)} · p90 ${F.b(s.p90)} · p99 ${F.b(s.p99)}<br>booms ${s.booms.toFixed(1)} · taps ${Math.round(s.taps)}`;
+    hit.addEventListener('mousemove', e=>tip.show(html, e.clientX, e.clientY));
+    hit.addEventListener('mouseleave', ()=>tip.hide());
+    hit.addEventListener('focus', ()=>{ const r=hit.getBoundingClientRect(); tip.show(html, r.left+r.width/2, r.top+r.height/2); });
+    hit.addEventListener('blur', ()=>tip.hide());
+  });
+  document.getElementById('rangeTable').innerHTML = '<table><tr><th>Strategy</th><th>Expected</th><th>Median</th><th>p10</th><th>p90</th><th>p99</th><th>Booms</th><th>Taps</th></tr>' +
+    DATA.strategies.map(s=>`<tr><td>${SNAME[s.key]}</td><td>${F.b(s.E,2)}</td><td>${F.b(s.median)}</td><td>${F.b(s.p10)}</td><td>${F.b(s.p90)}</td><td>${F.b(s.p99)}</td><td>${s.booms.toFixed(2)}</td><td>${Math.round(s.taps)}</td></tr>`).join('') + '</table>';
+})();
+
+/* ---------- histogram ---------- */
+(function(){
+  const card = document.getElementById('histCard'), tip = tipFor(card);
+  const keys = ['optimal','no_protection','classic_sg_15_17'];
+  const leg = document.getElementById('histLegend');
+  leg.innerHTML = keys.map(k=>`<span class="key"><span class="sw line" style="background:${css(SCOL[k])}"></span>${SNAME[k]}</span>`).join('');
+  const W=920, H=250, padL=46, padR=14, padT=10, padB=30;
+  const bins = DATA.histBins, bw=(W-padL-padR)/bins;
+  const trials = DATA.strategies[0].hist.reduce((a,b)=>a+b,0);
+  const ymax = Math.max(...keys.map(k=>Math.max(...DATA.strategies.find(s=>s.key===k).hist)))/trials;
+  const X=i=>padL+i*bw, Y=v=>padT+(H-padT-padB)*(1-v/(ymax*1.06));
+  const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`, role:'img','aria-label':'Cost distribution per strategy'}, document.getElementById('histPlot'));
+  for (let p=0;p<=4;p++){ const v=ymax*1.06*p/4;
+    svgEl('line',{x1:padL,x2:W-padR,y1:Y(v),y2:Y(v),stroke:css('--grid'),'stroke-width':1},svg);
+    svgEl('text',{x:padL-6,y:Y(v)+4,'text-anchor':'end'},svg).textContent=(v*100).toFixed(1)+'%'; }
+  for (let g=0;g<=200e9;g+=25e9){ const i=g/2.5e9;
+    svgEl('text',{x:X(i),y:H-10,'text-anchor':'middle'},svg).textContent=g/1e9+(g?'b':''); }
+  keys.forEach(k=>{
+    const s = DATA.strategies.find(t=>t.key===k), col = css(SCOL[k]);
+    let dArea=`M${X(0)},${Y(0)}`, dLine='';
+    s.hist.forEach((c,i)=>{ const y=Y(c/trials);
+      dArea+=` L${X(i)},${y} L${X(i+1)},${y}`; dLine+=(i?' L':'M')+`${X(i)},${y} L${X(i+1)},${y}`; });
+    dArea+=` L${X(bins)},${Y(0)} Z`;
+    svgEl('path',{d:dArea,fill:col,opacity:.10},svg);
+    svgEl('path',{d:dLine,fill:'none',stroke:col,'stroke-width':2,'stroke-linejoin':'round'},svg);
+  });
+  const ov = svgEl('rect',{x:padL,y:padT,width:W-padL-padR,height:H-padT-padB,class:'hit',tabindex:0,
+    role:'img','aria-label':'Hover or use arrow keys to read the distribution; values also in the percentile table'},svg);
+  let fi = 24;
+  function showBin(i, cx, cy){
+    i = Math.max(0, Math.min(bins-1, i));
+    const rows = keys.map(k=>{ const s=DATA.strategies.find(t=>t.key===k);
+      return `<span style="color:${css(SCOL[k])}">●</span> ${SNAME[k]}: <b>${(s.hist[i]/trials*100).toFixed(2)}%</b>`; }).join('<br>');
+    tip.show(`<b>${(i*2.5).toFixed(1)}–${((i+1)*2.5).toFixed(1)}b</b>${i===bins-1?' (pooled 200b+)':''}<br>${rows}`, cx, cy);
+  }
+  ov.addEventListener('mousemove', e=>{ const r=ov.getBoundingClientRect();
+    const i=Math.floor((e.clientX-r.left)/r.width*bins); fi=i; showBin(i, e.clientX, e.clientY); });
+  ov.addEventListener('mouseleave', ()=>tip.hide());
+  ov.addEventListener('focus', ()=>{ const r=ov.getBoundingClientRect(); showBin(fi, r.left+r.width*fi/bins, r.top+40); });
+  ov.addEventListener('blur', ()=>tip.hide());
+  ov.addEventListener('keydown', e=>{ if(e.key==='ArrowRight'||e.key==='ArrowLeft'){ e.preventDefault();
+    fi += e.key==='ArrowRight'?1:-1; const r=ov.getBoundingClientRect(); showBin(fi, r.left+r.width*fi/bins, r.top+40); }});
+  document.getElementById('histTable').innerHTML = '<table><tr><th>Strategy</th><th>p10</th><th>p25</th><th>Median</th><th>p75</th><th>p90</th><th>p99</th></tr>' +
+    keys.map(k=>{ const s=DATA.strategies.find(t=>t.key===k);
+      return `<tr><td>${SNAME[k]}</td><td>${F.b(s.p10)}</td><td>${F.b(s.p25)}</td><td>${F.b(s.median)}</td><td>${F.b(s.p75)}</td><td>${F.b(s.p90)}</td><td>${F.b(s.p99)}</td></tr>`; }).join('') + '</table>';
+})();
+
+/* ---------- boom distribution ---------- */
+(function(){
+  const card = document.getElementById('boomCard'), tip = tipFor(card);
+  const keys = ['optimal','no_protection'];
+  document.getElementById('boomLegend').innerHTML =
+    keys.map(k=>`<span class="key"><span class="sw" style="background:${css(SCOL[k])}"></span>${SNAME[k]}</span>`).join('');
+  const W=920, H=240, padL=46, padR=14, padT=14, padB=32, K=13;
+  const tot = DATA.strategies[0].boomDist.reduce((a,b)=>a+b,0);
+  const get = k => { const d=DATA.strategies.find(s=>s.key===k).boomDist.slice();
+    const pooled=d.slice(0,K); pooled[K-1]=d.slice(K-1).reduce((a,b)=>a+b,0); return pooled.map(c=>c/tot); };
+  const D = Object.fromEntries(keys.map(k=>[k,get(k)]));
+  const ymax = Math.max(...keys.flatMap(k=>D[k]));
+  const slot=(W-padL-padR)/K, bw=Math.min(24,(slot-10)/2);
+  const Y=v=>padT+(H-padT-padB)*(1-v/(ymax*1.1));
+  const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Boom count probabilities'},document.getElementById('boomPlot'));
+  for(let p=0;p<=3;p++){ const v=ymax*1.1*p/3;
+    svgEl('line',{x1:padL,x2:W-padR,y1:Y(v),y2:Y(v),stroke:css('--grid'),'stroke-width':1},svg);
+    svgEl('text',{x:padL-6,y:Y(v)+4,'text-anchor':'end'},svg).textContent=Math.round(v*100)+'%'; }
+  for(let i=0;i<K;i++){
+    const cx = padL+i*slot+slot/2;
+    svgEl('text',{x:cx,y:H-12,'text-anchor':'middle'},svg).textContent = i===K-1? (K-1)+'+' : i;
+    keys.forEach((k,j)=>{
+      const v=D[k][i], x=cx-bw-1+j*(bw+2), col=css(SCOL[k]);
+      svgEl('path',{d:barPath(x,Y(v),bw,Y(0)-Y(v),4),fill:col},svg);
+      const hit = svgEl('rect',{x:cx-slot/2,y:padT,width:slot,height:H-padT-padB,class:'hit'},svg);
+      if(j===1){ hit.setAttribute('tabindex',0);
+        const html=()=>`<b>${i===K-1?'13 or more':i} boom${i===1?'':'s'}</b><br>`+keys.map(kk=>
+          `<span style="color:${css(SCOL[kk])}">●</span> ${SNAME[kk]}: <b>${(D[kk][i]*100).toFixed(1)}%</b>`).join('<br>');
+        hit.setAttribute('role','img'); hit.setAttribute('aria-label',`${i} booms: optimal ${(D.optimal[i]*100).toFixed(1)}%, no protection ${(D.no_protection[i]*100).toFixed(1)}%`);
+        hit.addEventListener('mousemove',e=>tip.show(html(),e.clientX,e.clientY));
+        hit.addEventListener('mouseleave',()=>tip.hide());
+        hit.addEventListener('focus',()=>{const r=hit.getBoundingClientRect();tip.show(html(),r.left,r.top+30);});
+        hit.addEventListener('blur',()=>tip.hide());
+      }
+    });
+  }
+  svgEl('text',{x:padL+0*slot+slot/2,y:Y(D.optimal[0])-8,class:'lab1','text-anchor':'middle'},svg)
+    .textContent = 'P(0)='+ (D.optimal[0]*100).toFixed(0)+'%';
+  document.getElementById('boomTable').innerHTML = '<table><tr><th>Booms</th>'+keys.map(k=>`<th>${SNAME[k]}</th>`).join('')+'</tr>'+
+    Array.from({length:K},(_,i)=>`<tr><td>${i===K-1?(K-1)+'+':i}</td>`+keys.map(k=>`<td>${(D[k][i]*100).toFixed(2)}%</td>`).join('')+'</tr>').join('')+'</table>';
+})();
+
+/* ---------- deviation matrix ---------- */
+(function(){
+  const cols = ['M1','M2','M3','FULL'];
+  const head = { M1:'None (Lv1)', M2:'Level 2', M3:'Level 3', FULL:'Full (Lv4 / SG)' };
+  let html = '<table><tr><th>Tap at</th>' + cols.map(c=>{
+    const sw = c==='M1' ? '' : `<span class="sw" style="background:${c==='M2'?css('--m2'):c==='M3'?css('--m3'):css('--m4')};margin-right:5px;vertical-align:-1px"></span>`;
+    return `<th>${sw}${head[c]}</th>`; }).join('') + '</tr>';
+  for (const s of STARS){
+    const dev = DATA.deviations[s];
+    const opts = Object.keys(dev);
+    const best = Math.min(...Object.values(dev));
+    html += `<tr><td><b>${s}★</b> → ${+s+1}★</td>`;
+    for (const c of cols){
+      const key = c==='FULL' ? (opts.includes('SG')?'SG':'M4') : c;
+      const v = dev[key], d = v-best, o = DATA.options[s][key];
+      const tipTxt = `${MODE[key].full} — ${F.M(o.cost)}/tap, ${F.pct(o.succ)} success, ${F.pct(o.boom,2)} boom`;
+      html += d < 1e6
+        ? `<td class="best" title="${tipTxt}">${F.b(v)}</td>`
+        : `<td title="${tipTxt}">+${(d/1e9).toFixed(d<1e9?2:1)}b</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</table>';
+  document.getElementById('devMatrix').innerHTML = html;
+})();
+
+/* ---------- sensitivity bands ---------- */
+(function(){
+  const card = document.getElementById('sensCard'), tip = tipFor(card);
+  document.getElementById('sensLegend').innerHTML =
+    `<span class="key"><span class="sw" style="background:transparent;border:1px solid ${css('--axis')}"></span>None (Lv1)</span>
+     <span class="key"><span class="sw" style="background:${css('--m2')}"></span>Level 2</span>
+     <span class="key"><span class="sw" style="background:${css('--m3')}"></span>Level 3</span>
+     <span class="key"><span class="sw" style="background:${css('--m4')}"></span>Full (Lv4 / SG)</span>`;
+  const W=920, rowH=34, padL=64, padR=14, padT=6, padB=30;
+  const H = padT + rowH*7 + padB;
+  const X = v => padL + (v/20e9)*(W-padL-padR);
+  const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Optimal mode per star as spare price varies'},document.getElementById('sensPlot'));
+  for(let g=0;g<=20e9;g+=2.5e9){
+    svgEl('line',{x1:X(g),x2:X(g),y1:padT,y2:H-padB+4,stroke:css('--grid'),'stroke-width':1},svg);
+    svgEl('text',{x:X(g),y:H-12,'text-anchor':'middle'},svg).textContent=(g/1e9)+(g?'b':''); }
+  STARS.forEach((s,i)=>{
+    const y = padT + i*rowH;
+    svgEl('text',{x:0,y:y+rowH/2+4,class:'lab2','font-size':13},svg).textContent = s+'★';
+    for (const [a,b,m] of DATA.sensitivity[s]){
+      const x0=X(a)+1, x1=X(b)-1, h=rowH-8;
+      const col = MCOL(m);
+      const seg = svgEl('rect',{x:x0,y:y+2,width:Math.max(0,x1-x0),height:h,rx:4,
+        fill: col==='none'?'transparent':col, stroke: col==='none'?css('--axis'):'none','stroke-width':1},svg);
+      if (x1-x0 > 34){
+        const t = svgEl('text',{x:(x0+x1)/2,y:y+2+h/2+4,'text-anchor':'middle','font-size':11.5,'font-weight':600},svg);
+        t.textContent = MODE[m].lab;
+        t.setAttribute('fill', col==='none' ? css('--muted') : (m==='M4'||m==='SG') ? css('--m4-ink') : (m==='M2'&&css('--m2')==='#86b6ef') ? '#14171d' : '#ffffff');
+      }
+      const hit = svgEl('rect',{x:x0,y:y,width:Math.max(8,x1-x0),height:rowH,class:'hit',tabindex:0,
+        role:'img','aria-label':`${s} star, spare ${F.b(a)} to ${F.b(b)}: ${MODE[m].full}`},svg);
+      const html = `<b>${s}★ tap</b> · spare ${F.b(a)}–${F.b(b)}<br>best: <b>${MODE[m].full}</b>`;
+      hit.addEventListener('mousemove',e=>tip.show(html,e.clientX,e.clientY));
+      hit.addEventListener('mouseleave',()=>tip.hide());
+      hit.addEventListener('focus',()=>{const r=hit.getBoundingClientRect();tip.show(html,r.left+r.width/2,r.top+20);});
+      hit.addEventListener('blur',()=>tip.hide());
+    }
+  });
+  svgEl('line',{x1:X(2e9),x2:X(2e9),y1:padT-2,y2:H-padB+6,stroke:css('--accent-mark'),'stroke-width':2},svg);
+  svgEl('text',{x:X(2e9)+5,y:padT+9,class:'lab1','font-size':11.5},svg).textContent='hat spare ≈ 2b';
+  const flips = [['1.5b','Level 3 switches on at 20★ and 21★'],['2.25b','Level 2 at 17★'],
+    ['4.5b','Level 4 at 20★'],['5.75b','Safeguard at 17★'],['6.5b','Level 4 at 21★'],
+    ['8.75–9.5b','Level 2 at 15–16★'],['13.75–15.25b','Safeguard at 15–16★']];
+  document.getElementById('sensTable').innerHTML = '<table><tr><th>Spare price reaches</th><th>Change in optimal policy</th></tr>'+
+    flips.map(f=>`<tr><td>${f[0]}</td><td style="text-align:left">${f[1]}</td></tr>`).join('')+'</table>';
+})();
+
+/* ---------- spend bars ---------- */
+(function(){
+  const card = document.getElementById('spendCard'), tip = tipFor(card);
+  const rows = [['0–14★', DATA.spend.sub15, 'includes rebuilds from 12★ after every 15–19★ boom'],
+    ...STARS.map(s=>[s+'★', DATA.spend[s], DATA.optimalPolicy[s]==='M1'?'Level 1':'Level 3']),
+    ['Spare hats', DATA.strategies[0].spares, '≈5 booms × 2b']];
+  const W=920, rowH=34, padL=96, padR=64, padT=4;
+  const H = padT + rowH*rows.length + 30;
+  const xmax = 20e9, X=v=>padL+(v/xmax)*(W-padL-padR);
+  const svg = svgEl('svg',{viewBox:`0 0 ${W} ${H}`,role:'img','aria-label':'Expected spend by star range'},document.getElementById('spendPlot'));
+  for(let g=0;g<=20e9;g+=5e9){
+    svgEl('line',{x1:X(g),x2:X(g),y1:padT,y2:H-26,stroke:css('--grid'),'stroke-width':1},svg);
+    svgEl('text',{x:X(g),y:H-8,'text-anchor':'middle'},svg).textContent=(g/1e9)+(g?'b':''); }
+  rows.forEach((r,i)=>{
+    const y = padT+i*rowH+6, col = r[0]==='Spare hats' ? css('--accent-mark') : css('--s-noprot');
+    svgEl('text',{x:0,y:y+15,class:'lab2','font-size':13},svg).textContent = r[0];
+    svgEl('path',{d:rightBarPath(X(0),y,Math.max(2,X(r[1])-X(0)),20,4),fill:col,opacity:r[0]==='Spare hats'?0.9:0.75},svg);
+    svgEl('text',{x:X(r[1])+6,y:y+15,class:'lab1'},svg).textContent = F.b(r[1]);
+    const hit = svgEl('rect',{x:0,y:y-6,width:W,height:rowH,class:'hit',tabindex:0,role:'img',
+      'aria-label':`${r[0]}: ${F.b(r[1])} expected. ${r[2]}`},svg);
+    const html = `<b>${r[0]}</b> · ${F.b(r[1],2)} expected<br>${r[2]}`;
+    hit.addEventListener('mousemove',e=>tip.show(html,e.clientX,e.clientY));
+    hit.addEventListener('mouseleave',()=>tip.hide());
+    hit.addEventListener('focus',()=>{const rr=hit.getBoundingClientRect();tip.show(html,rr.left+120,rr.top+10);});
+    hit.addEventListener('blur',()=>tip.hide());
+  });
+  document.getElementById('spendTable').innerHTML = '<table><tr><th>Range</th><th>Expected meso</th></tr>'+
+    rows.map(r=>`<tr><td>${r[0]}</td><td>${F.b(r[1],2)}</td></tr>`).join('')+'</table>';
+})();
+
+/* ---------- rates table ---------- */
+(function(){
+  let html = `<table><tr><th>Tap at</th><th>Base cost</th>
+    <th>None: cost · succ · boom</th><th>Lv2</th><th>Lv3</th><th>Full (Lv4/SG)</th></tr>`;
+  for (const s of STARS){
+    const o = DATA.options[s];
+    const cell = k => o[k] ? `${F.M(o[k].cost)} · ${(o[k].succ*100).toFixed(1)}% · ${(o[k].boom*100).toFixed(2)}%` : '—';
+    const full = o.SG ? 'SG' : 'M4';
+    html += `<tr><td><b>${s}★</b></td><td>${F.M(DATA.baseCosts[s])}</td>
+      <td>${cell('M1')}</td><td>${cell('M2')}</td><td>${cell('M3')}</td><td>${cell(full)}</td></tr>`;
+  }
+  html += '</table>';
+  document.getElementById('ratesTable').innerHTML = html;
+})();
+</script>
+
+<button id="themeBtn" class="themebtn" title="Theme: auto / dark / light" aria-label="Toggle color theme">◐</button>
+<script>
+(function(){
+  const btn = document.getElementById('themeBtn');
+  let cur = null; try { cur = localStorage.getItem('sf-theme'); } catch(e) {}
+  btn.textContent = cur === 'dark' ? '☾' : cur === 'light' ? '☀' : '◐';
+  btn.addEventListener('click', () => {
+    const next = !cur ? 'dark' : cur === 'dark' ? 'light' : null;
+    try { next ? localStorage.setItem('sf-theme', next) : localStorage.removeItem('sf-theme'); } catch(e) {}
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>
