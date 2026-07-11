@@ -57,21 +57,24 @@ def boom_to(s):
 MVP = 0.10  # MVP Black, taps at star <= 16
 
 def tap_params(s, opt, event='none'):
-    """-> (tap_cost, p_succ, p_maint, p_boom) with MVP/guild-catch/event applied."""
+    """-> (tap_cost, p_succ, p_maint, p_boom) with MVP/guild-catch/event applied.
+    event: 'none' | '30off' (cost -30% only) | 'ssf' (cost -30% AND boom -30%)."""
+    cost_ev = event in ('ssf', '30off')
+    boom_ev = event == 'ssf'
     if s < 15:
         mult = 1.0 - (MVP if s <= 16 else 0.0)
-        if event == 'ssf': mult -= 0.30
+        if cost_ev: mult -= 0.30
         succ, boom = SUCC_BASE[s], 0.0
     else:
         cm, succ, boom = EM[s][opt]
         if cm == 'SG':   # classic safeguard: surcharge on top, never discounted
             mult = 1.0 - (MVP if s <= 16 else 0.0)
-            if event == 'ssf': mult -= 0.30
+            if cost_ev: mult -= 0.30
             mult += 2.0
         else:
             mult = cm - (MVP if s <= 16 else 0.0)
-            if event == 'ssf': mult *= 0.70
-        if event == 'ssf':  # 30% boom reduction at <=21*
+            if cost_ev: mult *= 0.70
+        if boom_ev:  # 30% boom reduction at <=21*
             boom *= 0.70
     # guild altar star catch
     s2 = min(1.0, succ * CATCH)

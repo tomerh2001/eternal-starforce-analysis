@@ -4,22 +4,25 @@
 
 Exact expected-cost optimization of every safeguard decision when starforcing a
 Lv 250 Eternal hat from 0★ to 22★ under the new GMS Star Force system
-(v.264 revamp + v.269 Enhancement Mode levels 1–4).
+(v.264 revamp + v.269 Enhancement Mode levels 1–4) — centered on the way people
+actually starforce: **during the 30% event** (Shining Star Force / Special Sunny
+Sunday: 30% off cost, 30% less destruction ≤21★).
 
 ## TL;DR
 
-**Tap bare (Level 1) from 0★ to 19★. Use Enhancement Mode Level 3 at 20★ and 21★.
-Never classic Safeguard, never Level 4.**
+**During the event: no safeguard, no modes — Level 1 at every star.**
+Protection isn't even good tail insurance there (the p90 doesn't improve).
 
-| Strategy | Expected | Median | p90 | Booms |
+| Strategy · event on | Expected | Median | p90 | Booms |
 |---|---|---|---|---|
-| **Optimal — Lv3 @ 20–21★ only** | **75.7b** | 59.2b | 149.7b | ~5.0 |
-| No protection anywhere | 77.2b | 56.2b | 166.8b | ~7.4 |
-| Safeguard 15–17★ (old habit) | 89.4b | 65.3b | 192.8b | ~4.2 |
-| Max protection | 198.6b | 177.6b | 337.3b | 0 |
+| **All bare (optimal)** | **38.5b** | 28.6b | 81.2b | ~3.8 |
+| Lv3 @ 20–21★ | 43.5b | 35.2b | 83.1b | ~2.7 |
+| Safeguard 15–17★ (old habit) | 50.2b | 37.3b | 104.9b | ~2.4 |
+| Max protection | 140.5b | 125.8b | 237.6b | 0 |
 
-During **Shining Star Force / Special Sunny Sunday**: drop *all* protection —
-expected cost falls to **38.5b (−49%)**.
+**Off-event** (side info — every tap costs ~2×): Level 3 at 20★ and 21★, bare
+everywhere else — 75.7b expected. **If the event is cost-only 30% off** (no boom
+reduction): Lv2 @ 17★ + Lv3 @ 20–21★ — 55.4b expected.
 
 ## Assumptions
 
@@ -27,23 +30,24 @@ expected cost falls to **38.5b (−49%)**.
 - **MVP Black** (−10% meso on taps ≤16★), **guild castle Enhancement Altar** (passive Star Catch ×1.05)
 - Post-revamp mechanics: fails never drop stars; no boom below 15★;
   boom restores 15–19★→12★, 20★→15★, 21★→17★
-- No event in the base case (SSF modeled separately)
+- Event modeled per v.269: 30% off cost (multiplicative on the full mode cost,
+  safeguard surcharge excluded) + 30% lower destruction ≤21★
 
-The report includes a spare-price sensitivity sweep (0–20b) — the policy for
-pricier Eternal pieces flips earlier (Lv2 @ 17★ from ~2.25b, Lv4 @ 20★ from
-~4.5b, Lv4 @ 21★ from ~6.5b, classic SG 15–17★ only from ~14b).
+The report includes spare-price sensitivity sweeps for both scenarios — during
+the event protection only starts at ~3.25b spares (Lv2 @ 17★); off-event it
+starts at ~1.5b (Lv3 @ 20–21★).
 
 ## Method
 
 - Star count as a Markov chain; expected cost per policy solved exactly (linear system)
-- All 4⁷ = 16,384 per-star policies enumerated; optimum cross-checked with value iteration
+- All 4⁷ = 16,384 per-star policies enumerated per scenario; optima cross-checked with value iteration
 - 300,000-trial Monte Carlo for medians, percentiles and boom distributions
-- Reproduce: `pip install numpy && python3 analysis/compute.py` (writes `results.json`)
+- Reproduce: `pip install numpy && cd analysis && python3 run_scenarios.py` (writes `results2.json`)
 
 ## Data sources
 
 - [GMS v.264 patch notes](https://www.nexon.com/maplestory/news/update/32522/updated-11-14-v-264-every-little-thing-every-precious-thing-patch-notes) — revamp rates, trace restore table
-- [GMS v.269 patch notes](https://www.nexon.com/maplestory/news/update/41138/v-269-ride-the-lightning-patch-notes) — Enhancement Mode
+- [GMS v.269 patch notes](https://www.nexon.com/maplestory/news/update/41138/v-269-ride-the-lightning-patch-notes) — Enhancement Mode, Special Sunny Sunday perks
 - [MapleStory Wiki — Star Force Enhancement](https://maplestorywiki.net/w/Star_Force_Enhancement) — discounts, altar, trace mechanics
 - [v269 community starforce calculator](https://starforce.tadeucci.dev/) — in-game measured Mode 2–4 rates and cost multipliers
 - [Orange Mushroom — KMS ver. 1.2.401](https://orangemushroom.net/2025/03/20/kms-ver-1-2-401-maplestory-next-destiny-weapon-star-force-reorganization/) — upstream renewal reference
@@ -52,5 +56,5 @@ pricier Eternal pieces flips earlier (Lv2 @ 17★ from ~2.25b, Lv4 @ 20★ from
 
 Mode 2–4 rates are community-measured (Mode 1 rates and all costs are
 official/verified in-game). The weekly free Trace Restoration (Eternal armor =
-2,312 pts vs ~126 pts/week cap) is excluded from the model. Not affiliated with
-Nexon.
+2,312 pts vs ~126 pts/week cap) is excluded from the model. The rarer 5/10/15
+Sunny Sunday is not modeled. Not affiliated with Nexon.
